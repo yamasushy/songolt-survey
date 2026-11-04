@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="mn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#ffffff">
+  <title>Судалгаа</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e6b5e'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preload" href="assets/fonts/golos-text-cyrillic-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <span class="topbar__title" id="topTitle">Судалгаа</span>
+      <span class="topbar__step" id="stepText" aria-live="polite"></span>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress__bar" id="progressBar"></div></div>
+  </header>
+  <div id="banner"></div>
+  <main id="app" class="wrap" tabindex="-1">
+    <p class="loading"><span class="spinner" aria-hidden="true"></span>Судалгааг ачаалж байна…</p>
+  </main>
+  <noscript>
+    <div class="wrap"><div class="notice notice--error"><h1 class="h2">JavaScript идэвхгүй байна</h1><p>Судалгааг бөглөхийн тулд хөтчийнхөө JavaScript-ийг идэвхжүүлнэ үү.</p></div></div>
+  </noscript>
+  <script src="assets/survey.js" defer></script>
+</body>
+</html>

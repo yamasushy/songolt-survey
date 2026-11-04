@@ -1,0 +1,195 @@
+/* Сонголтын туршилтын судалгаа: нийтлэг загвар
+   Туршилтын хяналтын үүднээс бүх оролцогчид нэг ижил (цайвар) өнгөөр харагдана. */
+
+@font-face { font-family: "Golos Text"; font-style: normal; font-display: swap; font-weight: 400; src: url(fonts/golos-text-cyrillic-ext-400-normal.woff2) format("woff2"); unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+@font-face { font-family: "Golos Text"; font-style: normal; font-display: swap; font-weight: 400; src: url(fonts/golos-text-cyrillic-400-normal.woff2) format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "Golos Text"; font-style: normal; font-display: swap; font-weight: 400; src: url(fonts/golos-text-latin-400-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Golos Text"; font-style: normal; font-display: swap; font-weight: 500; src: url(fonts/golos-text-cyrillic-ext-500-normal.woff2) format("woff2"); unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+@font-face { font-family: "Golos Text"; font-style: normal; font-display: swap; font-weight: 500; src: url(fonts/golos-text-cyrillic-500-normal.woff2) format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "Golos Text"; font-style: normal; font-display: swap; font-weight: 500; src: url(fonts/golos-text-latin-500-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Golos Text"; font-style: normal; font-display: swap; font-weight: 600; src: url(fonts/golos-text-cyrillic-ext-600-normal.woff2) format("woff2"); unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+@font-face { font-family: "Golos Text"; font-style: normal; font-display: swap; font-weight: 600; src: url(fonts/golos-text-cyrillic-600-normal.woff2) format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "Golos Text"; font-style: normal; font-display: swap; font-weight: 600; src: url(fonts/golos-text-latin-600-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Golos Text"; font-style: normal; font-display: swap; font-weight: 700; src: url(fonts/golos-text-cyrillic-ext-700-normal.woff2) format("woff2"); unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+@font-face { font-family: "Golos Text"; font-style: normal; font-display: swap; font-weight: 700; src: url(fonts/golos-text-cyrillic-700-normal.woff2) format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "Golos Text"; font-style: normal; font-display: swap; font-weight: 700; src: url(fonts/golos-text-latin-700-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+:root {
+  color-scheme: light;
+  --paper: #f5f7f6;
+  --surface: #ffffff;
+  --ink: #1c2421;
+  --muted: #59655f;
+  --line: #d4dcd8;
+  --line-soft: #e9eeeb;
+  --accent: #0e6b5e;
+  --accent-ink: #0a5249;
+  --accent-tint: #e3f1ed;
+  --danger: #b42318;
+  --danger-tint: #fdeceb;
+  --note: #fff4d6;
+  --note-line: #ecd48f;
+  --radius: 12px;
+  --font: "Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: 76px; scroll-padding-bottom: 96px; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 16px/1.55 var(--font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+img { max-width: 100%; display: block; }
+a { color: var(--accent-ink); text-underline-offset: 2px; }
+a:hover { color: var(--accent); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+[hidden] { display: none !important; }
+
+/* ---------- Дээд мөр ---------- */
+.topbar { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+.topbar__inner { max-width: 1160px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.topbar__title { font-weight: 600; font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar__step { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.progress { height: 3px; background: var(--line-soft); }
+.progress__bar { height: 100%; width: 0; background: var(--accent); transition: width 240ms ease; }
+
+.banner { background: var(--note); border-bottom: 1px solid var(--note-line); font-size: 14px; }
+.banner__inner { max-width: 1160px; margin: 0 auto; padding: 10px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.banner strong { font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--note-line); background: #fffaf0; color: var(--ink); text-decoration: none; font-size: 14px; font-variant-numeric: tabular-nums; }
+.chip[aria-current="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+/* ---------- Үндсэн хэсэг ---------- */
+.wrap { max-width: 680px; margin: 0 auto; padding: 28px 16px 56px; }
+.wrap--wide { max-width: 1160px; }
+.wrap:focus { outline: none; }
+.step--task { padding-bottom: 120px; }
+
+.title { font-size: clamp(26px, 5.2vw, 34px); line-height: 1.18; font-weight: 700; letter-spacing: -0.012em; margin: 4px 0 18px; text-wrap: balance; }
+.h2 { font-size: clamp(21px, 4vw, 25px); line-height: 1.25; font-weight: 700; letter-spacing: -0.008em; margin: 0 0 10px; }
+.prose { max-width: 64ch; }
+.prose p { margin: 0 0 12px; }
+.lead { color: var(--muted); margin: 0 0 24px; max-width: 64ch; }
+.fine { font-size: 14px; color: var(--muted); }
+
+.loading { display: flex; align-items: center; gap: 12px; color: var(--muted); padding: 48px 0; }
+.spinner { width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid var(--line); border-top-color: var(--accent); animation: spin 0.8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.notice { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+.notice--error { border-color: #f1b7b1; background: var(--danger-tint); }
+.notice h1, .notice h2 { margin-top: 0; }
+
+/* ---------- Товч ---------- */
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 24px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 22px; border-radius: 10px;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink);
+  font-weight: 600; font-size: 16px; cursor: pointer; text-decoration: none;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.btn:hover { border-color: #b6c2bc; }
+.btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn--primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); color: #fff; }
+.btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+.btn--small { min-height: 38px; padding: 0 14px; font-size: 14px; border-radius: 8px; }
+.btn .spinner { width: 16px; height: 16px; border-color: rgba(255, 255, 255, 0.45); border-top-color: #fff; }
+
+/* ---------- Зөвшөөрөл ---------- */
+.consent { display: flex; gap: 12px; align-items: flex-start; margin-top: 22px; padding: 16px; background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.consent input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
+.consent.has-error { border-color: var(--danger); }
+
+/* ---------- Асуулт ---------- */
+.section-intro { margin: 0 0 26px; }
+.q { border: 0; margin: 0 0 30px; padding: 0; min-width: 0; }
+.q__text { font-size: 16.5px; font-weight: 500; line-height: 1.45; padding: 0; margin-bottom: 12px; display: flex; gap: 8px; }
+.q__num { color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.q__opt-mark { color: var(--muted); font-size: 14px; font-weight: 400; }
+.q__error { color: var(--danger); font-size: 14px; margin: 8px 0 0; }
+
+.likert__scale { display: grid; grid-template-columns: repeat(var(--n, 7), minmax(0, 1fr)); gap: 6px; }
+.likert__opt { position: relative; display: block; cursor: pointer; }
+.likert__opt input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.likert__opt span { display: flex; align-items: center; justify-content: center; height: 46px; border: 1.5px solid var(--line); border-radius: 9px; background: var(--surface); font-weight: 600; font-variant-numeric: tabular-nums; transition: background-color 100ms ease, border-color 100ms ease; }
+.likert__opt:hover span { border-color: #b6c2bc; }
+.likert__opt input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; }
+.likert__opt input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+.likert__ends { display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; font-size: 13.5px; color: var(--muted); }
+.likert__ends span:last-child { text-align: right; }
+
+.options { display: grid; gap: 8px; }
+.option { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; cursor: pointer; }
+.option input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
+.option:has(input:checked) { border-color: var(--accent); background: var(--accent-tint); }
+
+.input { width: 100%; max-width: 420px; min-height: 48px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); }
+.input:focus { border-color: var(--accent); outline: 3px solid rgba(14, 107, 94, 0.18); outline-offset: 0; }
+.input--short { max-width: 160px; font-variant-numeric: tabular-nums; }
+
+.q.has-error .likert__opt span, .q.has-error .option, .q.has-error .input { border-color: var(--danger); }
+
+/* ---------- Бүтээгдэхүүний карт ---------- */
+.task-head { max-width: 680px; margin-bottom: 20px; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+.pcard {
+  position: relative; display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 14px; align-items: start;
+  padding: 14px; background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius);
+  cursor: pointer; transition: border-color 120ms ease, background-color 120ms ease;
+}
+.pcard:hover { border-color: #b3bfb9; }
+.pcard__input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.pcard:has(.pcard__input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pcard.is-selected { border-color: var(--accent); background: var(--accent-tint); box-shadow: inset 0 0 0 1px var(--accent); }
+.pcard__media { width: 112px; aspect-ratio: 1 / 1; border-radius: 8px; background: #fff; border: 1px solid var(--line-soft); display: grid; place-items: center; overflow: hidden; }
+.pcard__media img { width: 100%; height: 100%; object-fit: contain; }
+.pcard__name { display: block; font-weight: 600; font-size: 16px; line-height: 1.3; margin: 1px 28px 8px 0; }
+.specs { display: grid; }
+.spec { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 4px 0; border-top: 1px solid var(--line-soft); font-size: 14px; line-height: 1.35; }
+.spec:first-child { border-top: 0; padding-top: 0; }
+.spec__k { color: var(--muted); font-size: 13.5px; }
+.spec__v { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.pcard__mark { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--surface); }
+.pcard.is-selected .pcard__mark { border-color: var(--accent); background: var(--accent); }
+.pcard.is-selected .pcard__mark::after { content: ""; position: absolute; left: 6.5px; top: 3px; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+
+.choicebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--surface); border-top: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+.choicebar__inner { max-width: 1160px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.choicebar__status { margin: 0; min-width: 0; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.choicebar__status strong { color: var(--ink); font-weight: 600; }
+.choicebar .btn { flex: none; }
+
+/* ---------- Харилцах цонх ---------- */
+.dialog { border: 0; padding: 0; border-radius: 14px; max-width: min(440px, calc(100vw - 32px)); width: 100%; color: var(--ink); box-shadow: 0 24px 60px rgba(28, 36, 33, 0.28); }
+.dialog::backdrop { background: rgba(28, 36, 33, 0.48); }
+.dialog form { padding: 22px; }
+.dialog h2 { font-size: 19px; margin: 0 0 8px; }
+.dialog .actions { margin-top: 18px; justify-content: flex-end; }
+.dialog__pick { display: flex; gap: 12px; align-items: center; margin: 12px 0 4px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.dialog__pick img { width: 56px; height: 56px; object-fit: contain; border-radius: 6px; background: #fff; }
+.dialog__pick strong { font-weight: 600; }
+
+details.payload { margin-top: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+details.payload summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+details.payload pre { overflow: auto; font: 12.5px/1.5 var(--mono); margin: 10px 0 0; white-space: pre-wrap; word-break: break-all; }
+
+@media (max-width: 420px) {
+  .pcard { grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 12px; }
+  .pcard__media { width: 96px; }
+  .likert__scale { gap: 4px; }
+  .likert__opt span { height: 44px; }
+  .choicebar .btn { padding: 0 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
