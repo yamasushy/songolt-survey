@@ -143,6 +143,7 @@
       $progress.style.width = Math.round((idx / visible.length) * 100) + '%';
     }
     $app.className = 'wrap' + (S && S.step === 'task' ? ' wrap--wide' : '');
+    document.body.classList.toggle('is-wide', !!(S && S.step === 'task'));
   }
 
   function focusTop() {
@@ -170,6 +171,7 @@
     opts = opts || {};
     $stepText.textContent = '';
     $app.className = 'wrap';
+    document.body.classList.remove('is-wide');
     $app.innerHTML = '<div class="notice' + (opts.error ? ' notice--error' : '') + '" role="' + (opts.error ? 'alert' : 'status') + '">' +
       '<h1 class="h2">' + esc(title) + '</h1>' + paras(body) +
       (opts.retry ? '<div class="actions"><button class="btn btn--primary" type="button" id="retryBtn">Дахин оролдох</button></div>' : '') +
