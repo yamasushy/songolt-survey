@@ -350,7 +350,7 @@ function publishConfig() {
   }
   var url = webAppUrl_();
   msg += url
-    ? '\nВеб апп нийтлэгдсэн байна. Өөрчлөлт шууд оролцогчдод харагдана.'
+    ? '\nХүснэгтийн өөрчлөлт оролцогчдод шууд харагдана. Кодоо шинэчилсэн бол Apps Script дээр Deploy > Manage deployments > засах > Version: New version > Deploy хийнэ.'
     : '\nДараагийн алхам: Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone).';
   ui.alert('Амжилттай нийтэллээ', msg, ui.ButtonSet.OK);
 }
