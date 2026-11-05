@@ -8,7 +8,7 @@
  * Гуравдагч этгээдийн сервер рүү юу ч илгээхгүй.
  */
 
-var APP_VERSION = '1.0.0';
+var APP_VERSION = '1.0.1';
 var SITE_URL = '__SITE_URL__';
 
 var SHEET = {
@@ -69,6 +69,10 @@ var FIXED_COLUMNS = [
   ['configVersion', 'Тохиргооны хувилбар']
 ];
 
+var STARTED_HEADER = ['Оролцогчийн код', 'Нөхцөл', 'Эхэлсэн огноо', 'Дууссан огноо'];
+
+var SHEET_ORDER = [SHEET.SETTINGS, SHEET.ATTRS, SHEET.PRODUCTS, SHEET.QUESTIONS, SHEET.RESPONSES, SHEET.STARTED, SHEET.SUMMARY];
+
 var MAX_TEXT = 2000;
 var MAX_IMAGE_BYTES = 1500000;
 var WARN_IMAGE_BYTES = 400000;
@@ -92,49 +96,97 @@ function onOpen() {
  * 1. Загвар хуудсууд
  * -------------------------------------------------------------------- */
 
+function sheetBuilders_() {
+  var b = {};
+  b[SHEET.SETTINGS] = buildSettingsSheet_;
+  b[SHEET.ATTRS] = buildAttrsSheet_;
+  b[SHEET.PRODUCTS] = buildProductsSheet_;
+  b[SHEET.QUESTIONS] = buildQuestionsSheet_;
+  b[SHEET.RESPONSES] = buildResponsesSheet_;
+  b[SHEET.STARTED] = buildStartedSheet_;
+  b[SHEET.SUMMARY] = buildSummaryPlaceholder_;
+  return b;
+}
+
+/**
+ * Хуудсыг нэрээр нь авна. Байхгүй бол загвараар нь үүсгэнэ.
+ * Веб апп болон цэс аль аль нь үүгээр дамжина, тиймээс хуудас дутуу байсан ч алдаа гарахгүй.
+ */
+function getSheet_(name) {
+  var ss = SpreadsheetApp.getActive();
+  var sh = ss.getSheetByName(name);
+  if (sh) return sh;
+  sh = ss.insertSheet(name, ss.getSheets().length);
+  var builder = sheetBuilders_()[name];
+  if (builder) builder(sh);
+  return sh;
+}
+
 function setupSheets() {
   var ss = SpreadsheetApp.getActive();
+  var ui = SpreadsheetApp.getUi();
+  var builders = sheetBuilders_();
   var created = [];
   var skipped = [];
+  var failed = [];
 
-  function ensure(name, builder) {
+  SHEET_ORDER.forEach(function (name) {
     var sh = ss.getSheetByName(name);
     if (sh && sh.getLastRow() > 0) { skipped.push(name); return; }
-    if (!sh) sh = ss.insertSheet(name);
-    builder(sh);
-    created.push(name);
-  }
-
-  ensure(SHEET.SETTINGS, buildSettingsSheet_);
-  ensure(SHEET.ATTRS, buildAttrsSheet_);
-  ensure(SHEET.PRODUCTS, buildProductsSheet_);
-  ensure(SHEET.QUESTIONS, buildQuestionsSheet_);
-  ensure(SHEET.RESPONSES, function (sh) {
-    sh.getRange(1, 1, 1, FIXED_COLUMNS.length).setValues([FIXED_COLUMNS.map(function (c) { return c[1]; })]);
-    styleHeader_(sh, FIXED_COLUMNS.length);
-  });
-  ensure(SHEET.STARTED, function (sh) {
-    sh.getRange(1, 1, 1, 4).setValues([['Оролцогчийн код', 'Нөхцөл', 'Эхэлсэн огноо', 'Дууссан огноо']]);
-    styleHeader_(sh, 4);
-    sh.setColumnWidths(1, 4, 170);
-  });
-  ensure(SHEET.SUMMARY, function (sh) {
-    sh.getRange(1, 1).setValue('Тойм хэсэг "2. Тохиргоог шалгаж нийтлэх" цэсийг ажиллуулсны дараа бөглөгдөнө.');
+    try {
+      if (!sh) sh = ss.insertSheet(name, ss.getSheets().length);
+      builders[name](sh);
+      created.push(name);
+    } catch (err) {
+      failed.push(name + ': ' + (err && err.message ? err.message : err));
+    }
   });
 
   // Анхдагч хоосон "Sheet1"-ийг устгах
   ['Sheet1', 'Хуудас1', 'Лист1'].forEach(function (n) {
     var sh = ss.getSheetByName(n);
-    if (sh && sh.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(sh);
+    if (sh && sh.getLastRow() === 0 && ss.getSheets().length > 1) {
+      try { ss.deleteSheet(sh); } catch (e) { /* устгах боломжгүй бол үлдээнэ */ }
+    }
   });
   var first = ss.getSheetByName(SHEET.SETTINGS);
   if (first) ss.setActiveSheet(first);
 
-  var msg = '';
-  if (created.length) msg += 'Үүсгэсэн хуудас: ' + created.join(', ') + '\n\n';
-  if (skipped.length) msg += 'Өгөгдөлтэй тул хөндөөгүй хуудас: ' + skipped.join(', ') + '\n\n';
+  var ready = SHEET_ORDER.filter(function (n) { return !!ss.getSheetByName(n); }).length;
+  var msg = 'Бэлэн хуудас: ' + ready + ' / ' + SHEET_ORDER.length + '\n\n';
+  if (created.length) msg += 'Үүсгэсэн: ' + created.join(', ') + '\n\n';
+  if (skipped.length) msg += 'Өгөгдөлтэй тул хөндөөгүй: ' + skipped.join(', ') + '\n\n';
+  if (failed.length) {
+    msg += 'Алдаа гарсан:\n' + failed.join('\n') + '\n\nЭнэ мэдээллийг судалгааны хуудсыг бэлдсэн хүнд илгээнэ үү.';
+    ui.alert('Зарим хуудас үүссэнгүй', msg, ui.ButtonSet.OK);
+    return;
+  }
   msg += 'Дараагийн алхам: Тохиргоо, Үзүүлэлт, Бүтээгдэхүүн, Асуулт хуудсуудыг бөглөөд "2. Тохиргоог шалгаж нийтлэх" цэсийг дарна уу.';
-  SpreadsheetApp.getUi().alert('Загвар бэлэн боллоо', msg, SpreadsheetApp.getUi().ButtonSet.OK);
+  ui.alert('Загвар бэлэн боллоо', msg, ui.ButtonSet.OK);
+}
+
+function buildResponsesSheet_(sh) {
+  sh.getRange(1, 1, 1, FIXED_COLUMNS.length).setValues([FIXED_COLUMNS.map(function (c) { return c[1]; })]);
+  styleHeader_(sh, FIXED_COLUMNS.length);
+}
+
+function buildStartedSheet_(sh) {
+  sh.getRange(1, 1, 1, STARTED_HEADER.length).setValues([STARTED_HEADER]);
+  styleHeader_(sh, STARTED_HEADER.length);
+  sh.setColumnWidths(1, STARTED_HEADER.length, 170);
+}
+
+function buildSummaryPlaceholder_(sh) {
+  sh.getRange(1, 1).setValue('Тойм хэсэг "2. Тохиргоог шалгаж нийтлэх" цэсийг ажиллуулсны дараа бөглөгдөнө.');
+}
+
+function setNotes_(sh, col, lines) {
+  sh.getRange(1, col).setValue('Тайлбар').setFontWeight('bold').setBackground('#e6ece9');
+  sh.getRange(2, col, lines.length, 1)
+    .setValues(lines.map(function (l) { return [l]; }))
+    .setWrap(true).setVerticalAlignment('top').setFontColor('#5e6a65');
+  sh.setColumnWidth(col - 1, 24);
+  sh.setColumnWidth(col, 380);
 }
 
 function buildSettingsSheet_(sh) {
@@ -164,9 +216,13 @@ function buildAttrsSheet_(sh) {
   sh.setColumnWidth(1, 70);
   sh.setColumnWidth(2, 280);
   sh.setColumnWidth(3, 240);
-  setDropdown_(sh.getRange(2, 3, 8, 1), [YES, NO]);
   sh.getRange(2, 2, 8, 1).setBackground('#fff4d6');
-  sh.getRange(11, 1).setValue('Дараалал нь картан дээр харагдах дарааллыг тодорхойлно. Мөр нэмбэл Бүтээгдэхүүн хуудсанд мөн багана нэмнэ.').setFontColor('#5e6a65');
+  setNotes_(sh, 5, [
+    'Үзүүлэлтүүд картан дээр энэ дарааллаар харагдана.',
+    '"4 үзүүлэлттэй нөхцөлд харуулах" баганад бага нөхцөлд харагдах үзүүлэлтийг Тийм гэж тэмдэглэнэ.',
+    'Үзүүлэлт нэмбэл энд мөр нэмж, Бүтээгдэхүүн хуудсанд мөн багана нэмнэ.'
+  ]);
+  setDropdown_(sh.getRange(2, 3, 8, 1), [YES, NO]);
 }
 
 function buildProductsSheet_(sh) {
@@ -209,16 +265,18 @@ function buildQuestionsSheet_(sh) {
   sh.setColumnWidth(5, 300);
   sh.setColumnWidth(6, 130);
   sh.getRange(2, 3, rows.length - 1, 1).setWrap(true);
-  setDropdown_(sh.getRange(2, 1, 60, 1), Object.keys(QUESTION_SECTIONS));
-  setDropdown_(sh.getRange(2, 4, 60, 1), Object.keys(QUESTION_TYPES));
-  setDropdown_(sh.getRange(2, 6, 60, 1), [YES, NO]);
-  var noteRow = rows.length + 2;
-  sh.getRange(noteRow, 1, 4, 1).setValues([
-    ['Сонголт төрөл: сонголтуудыг цэг таслалаар (;) тусгаарлана. Жишээ: Эрэгтэй; Эмэгтэй'],
-    ['Likert төрөл: хоосон бол Тохиргоо хуудасны хэмжүүрийг ашиглана. Өөр хэмжүүр хэрэгтэй бол: 7; Маш цөөн; Маш олон'],
-    ['Код: хариултын хүснэгтийн баганын нэр болно. Давхардахгүй, латин үсэг ба тоо ашиглахыг зөвлөе.'],
-    ['[ ] хаалттай текстийг өөрийн асуултаар солихгүй бол нийтлэх үед алдаа заана.']
-  ]).setFontColor('#5e6a65');
+  // Тайлбарыг асуултын баганаас тусад нь (H баганад) бичнэ. Dropdown-тэй нүдэнд текст бичихгүй.
+  setNotes_(sh, 8, [
+    'Асуулт нэмэх: шинэ мөр нэмээд Хэсэг, Код, Асуулт, Төрлийг бөглөнө. Кодыг өөрчлөх шаардлагагүй. Дараа нь "2. Тохиргоог шалгаж нийтлэх" цэсийг дахин дарна.',
+    'Асуултууд хэсэг бүрийн дотор энэ хүснэгтийн дарааллаар харагдана.',
+    'Сонголт төрөл: сонголтуудыг цэг таслалаар (;) тусгаарлана. Жишээ: Эрэгтэй; Эмэгтэй',
+    'Likert төрөл: хоосон бол Тохиргоо хуудасны хэмжүүрийг ашиглана. Өөр хэмжүүр хэрэгтэй бол: 7; Маш цөөн; Маш олон',
+    'Код: хариултын хүснэгтийн баганын нэр болно. Давхардахгүй, латин үсэг ба тоо ашиглахыг зөвлөе (жишээ: BOLOVSROL).',
+    '[ ] хаалттай текстийг өөрийн асуултаар солихгүй бол нийтлэх үед алдаа заана.'
+  ]);
+  setDropdown_(sh.getRange(2, 1, 100, 1), Object.keys(QUESTION_SECTIONS));
+  setDropdown_(sh.getRange(2, 4, 100, 1), Object.keys(QUESTION_TYPES));
+  setDropdown_(sh.getRange(2, 6, 100, 1), [YES, NO]);
 }
 
 function styleHeader_(sh, cols) {
@@ -228,7 +286,9 @@ function styleHeader_(sh, cols) {
 }
 
 function setDropdown_(range, values) {
-  var rule = SpreadsheetApp.newDataValidation().requireValueInList(values, true).setAllowInvalid(false).build();
+  // Буруу утгыг хориглохгүй, зөвхөн анхааруулна. Хориглосон үед скрипт болон хуулж тавих (paste) үйлдэл
+  // алдаа өгдөг. Утгын зөв эсэхийг "2. Тохиргоог шалгаж нийтлэх" цэс шалгана.
+  var rule = SpreadsheetApp.newDataValidation().requireValueInList(values, true).setAllowInvalid(true).build();
   range.setDataValidation(rule);
 }
 
@@ -279,6 +339,7 @@ function publishConfig() {
   props.setProperty('STARTED_COUNTS', JSON.stringify(nextCounts));
 
   ensureResponseHeaders_(result.validation.questionCodes);
+  getSheet_(SHEET.STARTED);
   buildSummarySheet_(config.conditions);
 
   var msg = 'Нөхцөл: ' + config.conditions.map(function (c) { return c.id; }).join(', ') + '\n' +
@@ -296,6 +357,7 @@ function publishConfig() {
 
 function readSheet_(name) {
   var sh = SpreadsheetApp.getActive().getSheetByName(name);
+  if (!sh) return [];
   var lr = sh.getLastRow();
   var lc = sh.getLastColumn();
   if (lr < 1 || lc < 1) return [];
@@ -393,6 +455,13 @@ function buildConfig_(raw, imageResolver) {
   }
   if (products.length === 18 && nProdSmall !== 6) warnings.push('Бага нөхцөлд ' + nProdSmall + ' бүтээгдэхүүн тэмдэглэгдсэн (таны загварт 6).');
   if (attributes.length === 8 && nAttrSmall !== 4) warnings.push('Бага нөхцөлд ' + nAttrSmall + ' үзүүлэлт тэмдэглэгдсэн (таны загварт 4).');
+
+  // Гадны URL-ийн анхааруулгыг нэгтгэнэ
+  var ext = warnings.filter(function (w) { return w.indexOf('EXTURL:') === 0; }).map(function (w) { return w.slice(7); });
+  if (ext.length) {
+    warnings = warnings.filter(function (w) { return w.indexOf('EXTURL:') !== 0; });
+    warnings.push(ext.length + ' бүтээгдэхүүний зураг гадны URL-аас ачаалагдана (' + ext.slice(0, 6).join(', ') + (ext.length > 6 ? '…' : '') + '). Тухайн сайт зургаа хаавал харагдахгүй болно. Drive-д байршуулахыг зөвлөе.');
+  }
 
   // Асуулт
   var reserved = {};
@@ -510,7 +579,7 @@ function resolveImage_(rawValue, label, errors, warnings) {
     }
   }
   if (/^https:\/\/\S+$/i.test(s)) {
-    warnings.push(label + ': гадны URL ашигласан. Тухайн сайт зургаа хаавал харагдахгүй болно. Drive-д байршуулахыг зөвлөе.');
+    warnings.push('EXTURL:' + label.replace('Бүтээгдэхүүн ', ''));
     return s;
   }
   errors.push(label + ': зургийн холбоос буруу. Google Drive холбоос эсвэл https:// эхлэлтэй URL оруулна.');
@@ -540,8 +609,7 @@ function saveConfigFile_(json) {
 }
 
 function ensureResponseHeaders_(questionCodes) {
-  var sh = SpreadsheetApp.getActive().getSheetByName(SHEET.RESPONSES);
-  if (!sh) sh = SpreadsheetApp.getActive().insertSheet(SHEET.RESPONSES);
+  var sh = getSheet_(SHEET.RESPONSES);
   var lc = Math.max(sh.getLastColumn(), 1);
   var header = sh.getRange(1, 1, 1, lc).getValues()[0].map(String);
   var wanted = FIXED_COLUMNS.map(function (c) { return c[1]; }).concat(questionCodes);
@@ -553,7 +621,7 @@ function ensureResponseHeaders_(questionCodes) {
 
 function buildSummarySheet_(conditions) {
   var ss = SpreadsheetApp.getActive();
-  var sh = ss.getSheetByName(SHEET.SUMMARY) || ss.insertSheet(SHEET.SUMMARY);
+  var sh = getSheet_(SHEET.SUMMARY);
   sh.clear();
   var resp = "'" + SHEET.RESPONSES + "'";
   var started = "'" + SHEET.STARTED + "'";
@@ -635,7 +703,7 @@ function doGet(e) {
   var a = (e && e.parameter && e.parameter.a) || '';
   try {
     if (a === 'config') return configOutput_();
-    return json_({ ok: true, service: 'songolt-survey', version: APP_VERSION });
+    return json_({ ok: true, service: 'songolt-survey', backend: APP_VERSION });
   } catch (err) {
     return json_({ ok: false, error: 'server', message: String(err && err.message || err) });
   }
@@ -673,7 +741,7 @@ function configOutput_() {
   } catch (err) {
     return json_({ ok: false, error: 'not_published' });
   }
-  var text = '{"ok":true,"status":"' + liveStatus_() + '","config":' + raw + '}';
+  var text = '{"ok":true,"status":"' + liveStatus_() + '","backend":"' + APP_VERSION + '","config":' + raw + '}';
   return ContentService.createTextOutput(text).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -702,7 +770,7 @@ function startParticipant_() {
     counts[condition] = (counts[condition] || 0) + 1;
     props.setProperty('STARTED_COUNTS', JSON.stringify(counts));
     var pid = Utilities.getUuid().replace(/-/g, '').slice(0, 12).toUpperCase();
-    var sh = SpreadsheetApp.getActive().getSheetByName(SHEET.STARTED);
+    var sh = getSheet_(SHEET.STARTED);
     sh.appendRow([pid, condition, new Date(), '']);
     return { ok: true, pid: pid, condition: condition };
   } finally {
@@ -778,7 +846,7 @@ function saveResponse_(body) {
   lock.waitLock(25000);
   try {
     var ss = SpreadsheetApp.getActive();
-    var started = ss.getSheetByName(SHEET.STARTED);
+    var started = getSheet_(SHEET.STARTED);
     var cell = started.getRange('A:A').createTextFinder(pid).matchEntireCell(true).findNext();
     if (!cell) return { ok: false, error: 'unknown_participant' };
     var row = cell.getRow();
@@ -790,7 +858,7 @@ function saveResponse_(body) {
     var built = buildResponseRecord_(body, validation, now);
     if (built.error) return { ok: false, error: built.error };
 
-    var sh = ss.getSheetByName(SHEET.RESPONSES);
+    var sh = getSheet_(SHEET.RESPONSES);
     var lc = Math.max(sh.getLastColumn(), 1);
     var header = sh.getRange(1, 1, 1, lc).getValues()[0].map(String);
     Object.keys(built.byHeader).forEach(function (h) {

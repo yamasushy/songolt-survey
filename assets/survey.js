@@ -62,6 +62,16 @@
     return 'Компьютер';
   }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  // Серверээс ирсэн алдаа (сүлжээний алдаанаас ялгахын тулд)
+  function serverError(res) {
+    var e = new Error((res && res.error) || 'bad_response');
+    e.server = true;
+    e.detail = res && res.message ? String(res.message).slice(0, 160) : '';
+    return e;
+  }
+  function errorDetail(err) {
+    return err.message + (err.detail ? ' (' + err.detail + ')' : '');
+  }
 
   var store = {
     load: function () {
@@ -232,17 +242,19 @@
       begin.then(function (res) {
         if (!res || !res.ok) {
           if (res && res.error === 'closed') return renderNotice('Судалгаа хаагдсан байна', 'Энэ судалгаанд хариулт авах хугацаа дууссан. Сонирхсонд баярлалаа.');
-          throw new Error(res && res.error || 'start_failed');
+          throw serverError(res);
         }
         if (!conditionById(res.condition)) throw new Error('unknown_condition');
         S.pid = res.pid;
         S.condition = res.condition;
         S.startedAt = Date.now();
         goTo(nextStep('intro'));
-      }).catch(function () {
+      }).catch(function (err) {
         btn.disabled = false;
         btn.textContent = 'Судалгааг эхлэх';
-        startErr.textContent = 'Холболт амжилтгүй боллоо. Интернэт холболтоо шалгаад дахин дарна уу.';
+        startErr.textContent = err && err.server
+          ? 'Судалгааг эхлүүлж чадсангүй. Судлаачид дараах алдааг мэдэгдэнэ үү: ' + errorDetail(err)
+          : 'Холболт амжилтгүй боллоо. Интернэт холболтоо шалгаад дахин дарна уу.';
         startErr.hidden = false;
       });
     });
@@ -515,7 +527,7 @@
       attempt++;
       return api.submit(payload).then(function (res) {
         if (res && res.ok) return res;
-        var e = new Error(res && res.error || 'submit_failed');
+        var e = serverError(res);
         e.fatal = !!(res && res.error && res.error !== 'server');
         throw e;
       }).catch(function (err) {
@@ -537,6 +549,8 @@
         errEl.textContent = 'Судалгаа хаагдсан тул хариултыг хүлээн авсангүй.';
       } else if (err && err.fatal) {
         errEl.textContent = 'Хариултыг хүлээн авсангүй (' + err.message + '). Судлаачид энэ кодыг мэдэгдэнэ үү: ' + S.pid;
+      } else if (err && err.server) {
+        errEl.textContent = 'Хариултыг хадгалж чадсангүй. Таны хариулт энэ төхөөрөмжид хадгалагдсан байгаа. Хэсэг хугацааны дараа "Дахин илгээх" товчийг дарна уу. Алдаа: ' + errorDetail(err);
       } else {
         errEl.textContent = 'Илгээж чадсангүй. Таны хариулт энэ төхөөрөмжид хадгалагдсан байгаа. Интернэт холболтоо шалгаад "Дахин илгээх" товчийг дарна уу.';
       }

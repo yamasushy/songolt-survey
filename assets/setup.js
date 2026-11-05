@@ -5,6 +5,7 @@
   var SITE = location.origin + location.pathname.replace(/[^/]*$/, '');
   var URL_KEY = 'songolt:setup:url';
   var codeText = '';
+  var latestVersion = '';
 
   function $(id) { return document.getElementById(id); }
   function esc(s) {
@@ -46,6 +47,8 @@
     return r.text();
   }).then(function (t) {
     codeText = t.replace("'__SITE_URL__'", "'" + SITE.replace(/\/$/, '') + "'");
+    var vm = t.match(/var APP_VERSION = '([^']+)'/);
+    latestVersion = vm ? vm[1] : '';
     $('codePre').textContent = codeText;
     $('codeInfo').textContent = 'Code.gs (' + codeText.split('\n').length + ' мөр)';
   }).catch(function () {
@@ -127,6 +130,11 @@
     var bySection = { general: 0, cos: 0, check: 0 };
     cfg.questions.forEach(function (q) { bySection[q.section] = (bySection[q.section] || 0) + 1; });
     var closed = data.status === 'closed';
+    var outdated = latestVersion && data.backend !== latestVersion;
+    var outdatedHtml = outdated
+      ? '<div class="callout"><p><strong>Web app хуучин кодоор ажиллаж байна' + (data.backend ? ' (' + esc(data.backend) + ')' : '') + '.</strong> ' +
+        'Хамгийн сүүлийн хувилбар нь ' + esc(latestVersion) + '. Кодоо шинэчилсний дараа Apps Script дээр <span class="ui">Deploy</span> › <span class="ui">Manage deployments</span> › харандаа дүрс › <span class="ui">Version: New version</span> › <span class="ui">Deploy</span> дарна уу. Холбоос өөрчлөгдөхгүй.</p></div>'
+      : '';
     var previews = cfg.conditions.map(function (c) {
       return '<a class="chip" href="' + esc(link + '&preview=' + encodeURIComponent(c.id)) + '" target="_blank" rel="noopener">' + esc(c.label) + '</a>';
     }).join('');
@@ -141,7 +149,7 @@
           '<dt>Үзүүлэлт</dt><dd>' + cfg.attributes.length + ' (бага нөхцөлд ' + cfg.attributes.filter(function (x) { return x.inSmall; }).length + ')</dd>' +
           '<dt>Асуулт</dt><dd>Ерөнхий ' + bySection.general + ', COS ' + bySection.cos + ', шалгах ' + bySection.check + '</dd>' +
           '<dt>Нийтэлсэн</dt><dd>' + esc(String(cfg.version || '').replace('T', ' ')) + '</dd>' +
-        '</dl>' +
+        '</dl>' + outdatedHtml +
         '<div class="share">' +
           '<div>' +
             '<label for="shareLink"><strong>Оролцогчдод илгээх холбоос</strong></label>' +
