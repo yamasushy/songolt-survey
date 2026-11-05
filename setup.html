@@ -56,7 +56,7 @@
         <h2>Загвар хуудсуудыг үүсгэх</h2>
         <p>Google Sheet-ийнхээ таб руу буцаж, хуудсыг дахин ачаална (F5). Цэсэнд <span class="ui">Судалгаа</span> гэсэн шинэ цэс гарна. <span class="ui">Судалгаа</span> › <span class="ui">1. Загвар хуудсуудыг үүсгэх</span>-ийг дарна.</p>
         <div class="callout">
-          <p><strong>Анх удаа зөвшөөрөл асууна.</strong> <span class="ui">Continue</span> дараад Google бүртгэлээ сонгоно. "Google hasn't verified this app" гэж гарвал <span class="ui">Advanced</span> › <span class="ui">Go to … (unsafe)</span>-ийг дарж, бүх зөвшөөрлийг чагталаад <span class="ui">Allow</span> дарна.</p>
+          <p><strong>Анх удаа зөвшөөрөл асууна.</strong> "Authorization required" цонхонд <span class="ui">OK</span> дараад, шинээр нээгдэх цонхонд Google бүртгэлээ сонгоно. "Google hasn't verified this app" гэж гарвал <span class="ui">Advanced</span> › <span class="ui">Go to … (unsafe)</span>-ийг дарж, бүх зөвшөөрлийг чагталаад <span class="ui">Allow</span> дарна.</p>
           <p>Энэ нь таны өөрийн бичсэн код гэсэн утгатай анхааруулга. Код зөвхөн энэ хүснэгт, таны жагсаасан зураг, тохиргооны нэг файлтай ажиллана.</p>
         </div>
         <p>Үүний дараа 7 хуудас үүсч, "Бэлэн хуудас: 7 / 7" гэсэн мэдэгдэл гарна: Тохиргоо, Үзүүлэлт, Бүтээгдэхүүн, Асуулт, Хариулт, Эхэлсэн, Тойм.</p>
@@ -109,8 +109,9 @@
         <ol class="sub">
           <li>Баруун дээд буланд <span class="ui">Deploy</span> › <span class="ui">New deployment</span>.</li>
           <li><span class="ui">Select type</span>-ийн хажуу дахь араа дүрс дээр дарж <span class="ui">Web app</span>-ийг сонгоно.</li>
-          <li><span class="ui">Execute as</span>: <strong>Me</strong>. <span class="ui">Who has access</span>: <strong>Anyone</strong>.</li>
-          <li><span class="ui">Deploy</span> дарж, гарч ирсэн <span class="ui">Web app URL</span>-ийг хуулна. Энэ URL <code>/exec</code>-ээр төгсдөг.</li>
+          <li><span class="ui">Execute as</span>: <strong>Me</strong>. <span class="ui">Who has access</span>: <strong>Anyone</strong>. Анхдагч утга нь "Only myself" байдаг тул заавал сольно.</li>
+          <li><span class="ui">Deploy</span> дарна. "The Web App requires you to authorize access" гэж гарвал <span class="ui">Authorize access</span> дарж, 3 дугаар алхмынхтай адил зөвшөөрнө.</li>
+          <li>Гарч ирсэн <span class="ui">Web app URL</span>-ийг хуулна. Энэ URL <code>/exec</code>-ээр төгсдөг.</li>
         </ol>
         <div class="callout">
           <p><strong>Who has access: Anyone</strong> сонгох нь зайлшгүй. Үгүй бол бүртгэлгүй оролцогч хариулт илгээж чадахгүй. Оролцогчид таны хүснэгтийг харах эрхгүй, зөвхөн хариултаа нэмнэ.</p>
@@ -188,7 +189,7 @@
       <dl class="sheetlist">
         <div><dt>4-5 хуудас л үүссэн</dt><dd>Хуучин кодын алдаа. <a href="#update">Код шинэчлэх</a> хэсгийн 1-3 дугаар алхмыг хийнэ.</dd></div>
         <div><dt>"Судалгааг эхлүүлж чадсангүй"</dt><dd>Алдааны дэлгэрэнгүй текстийг хуулж авна. Ихэнхдээ код шинэчлээд дахин deploy хийхэд засагдана.</dd></div>
-        <div><dt>"Холболт амжилтгүй боллоо"</dt><dd>Deploy хийхдээ <strong>Who has access: Anyone</strong> сонгосон эсэхийг шалгана. Байгууллагын Google бүртгэл (Workspace) дээр "Anyone" сонголт хаалттай байж болно. Тэр тохиолдолд хувийн Gmail бүртгэлээр Sheet үүсгэнэ.</dd></div>
+        <div><dt>"Холболт амжилтгүй боллоо"</dt><dd>Deploy хийхдээ <strong>Who has access: Anyone</strong> сонгосон эсэхийг шалгана (<span class="ui">Deploy</span> › <span class="ui">Manage deployments</span> дээр харагдана). Байгууллагын Google бүртгэл (Workspace) дээр "Anyone" сонголт хаалттай байж болно. Тэр тохиолдолд хувийн Gmail бүртгэлээр Sheet үүсгэнэ.</dd></div>
         <div><dt>"Судалгаа бэлэн болоогүй байна"</dt><dd>"2. Тохиргоог шалгаж нийтлэх" цэсийг ажиллуулаагүй эсвэл алдаатай дууссан. Цэсийг дахин дарж, гарсан алдааг засна.</dd></div>
         <div><dt>Зураг харагдахгүй</dt><dd>Зургийн нүдэнд Drive файлын холбоос байгаа эсэхийг шалгана (хавтасны холбоос биш). Засаад дахин нийтэлнэ.</dd></div>
       </dl>

@@ -8,7 +8,7 @@
  * Гуравдагч этгээдийн сервер рүү юу ч илгээхгүй.
  */
 
-var APP_VERSION = '1.0.1';
+var APP_VERSION = '1.0.2';
 var SITE_URL = '__SITE_URL__';
 
 var SHEET = {
@@ -150,7 +150,7 @@ function setupSheets() {
     }
   });
   var first = ss.getSheetByName(SHEET.SETTINGS);
-  if (first) ss.setActiveSheet(first);
+  if (first) first.activate();
 
   var ready = SHEET_ORDER.filter(function (n) { return !!ss.getSheetByName(n); }).length;
   var msg = 'Бэлэн хуудас: ' + ready + ' / ' + SHEET_ORDER.length + '\n\n';
@@ -184,9 +184,9 @@ function setNotes_(sh, col, lines) {
   sh.getRange(1, col).setValue('Тайлбар').setFontWeight('bold').setBackground('#e6ece9');
   sh.getRange(2, col, lines.length, 1)
     .setValues(lines.map(function (l) { return [l]; }))
-    .setWrap(true).setVerticalAlignment('top').setFontColor('#5e6a65');
+    .setWrap(false).setVerticalAlignment('top').setFontColor('#5e6a65');
   sh.setColumnWidth(col - 1, 24);
-  sh.setColumnWidth(col, 380);
+  sh.setColumnWidth(col, 520);
 }
 
 function buildSettingsSheet_(sh) {
