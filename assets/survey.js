@@ -127,11 +127,16 @@
     for (var i = 0; i < CFG.products.length; i++) if (CFG.products[i].code === code) return CFG.products[i];
     return null;
   }
+  // Хуудасны дараалал: танилцуулга > (ерөнхий) > өмнөх туршлага > даалгавар > COS > шалгах > (ерөнхий) > төгсгөл
   function buildSteps() {
+    var generalAtEnd = CFG.settings.generalPosition !== 'start';
+    var hasGeneral = questionsOf('general').length > 0;
     var s = ['intro'];
-    if (questionsOf('general').length) s.push('general');
+    if (hasGeneral && !generalAtEnd) s.push('general');
+    if (questionsOf('experience').length) s.push('experience');
     s.push('task', 'cos');
     if (questionsOf('check').length) s.push('check');
+    if (hasGeneral && generalAtEnd) s.push('general');
     s.push('done');
     return s;
   }
@@ -201,6 +206,7 @@
     switch (S.step) {
       case 'intro': return renderIntro();
       case 'general': return renderQuestions('general');
+      case 'experience': return renderQuestions('experience');
       case 'task': return renderTask();
       case 'cos': return renderQuestions('cos');
       case 'check': return renderQuestions('check');
@@ -275,6 +281,7 @@
   function sectionMeta(section) {
     var st = CFG.settings;
     if (section === 'general') return { title: st.generalTitle || 'Ерөнхий мэдээлэл', intro: '' };
+    if (section === 'experience') return { title: st.experienceTitle || 'Бүтээгдэхүүний өмнөх туршлага', intro: st.experienceIntro };
     if (section === 'cos') return { title: st.cosTitle || 'Таны сонголтын тухай', intro: st.cosIntro };
     return { title: st.checkTitle || 'Нэмэлт асуулт', intro: st.checkIntro };
   }
@@ -399,6 +406,14 @@
     if (!cond) return renderNotice('Нөхцөл олдсонгүй', 'Судалгааны тохиргоо өөрчлөгдсөн байж магадгүй. Хуудсыг дахин ачаална уу.', { error: true, retry: true });
     ensureOrder(cond);
     var attrs = CFG.attributes.filter(function (a) { return !cond.small.attributes || a.inSmall; });
+    // Үзүүлэлтийн тайлбар: тухайн нөхцөлд харагдах үзүүлэлтүүдийнх л харагдана
+    var described = attrs.filter(function (a) { return a.desc; });
+    var glossary = described.length
+      ? '<section class="glossary" aria-labelledby="glossaryTitle"><h2 class="glossary__title" id="glossaryTitle">' + esc(CFG.settings.glossaryTitle || 'Үзүүлэлтүүдийн тайлбар') + '</h2>' +
+        '<dl class="glossary__list">' + described.map(function (a) {
+          return '<div class="glossary__row"><dt>' + esc(a.name) + '</dt><dd>' + esc(a.desc) + '</dd></div>';
+        }).join('') + '</dl></section>'
+      : '';
     S.device = deviceType();
     S.viewportWidth = window.innerWidth;
     store.save();
@@ -419,6 +434,7 @@
     $app.innerHTML =
       '<section class="step step--task">' +
         '<div class="task-head"><h1 class="h2">' + esc(CFG.settings.taskTitle || 'Бүтээгдэхүүн сонгох') + '</h1><div class="prose">' + paras(CFG.settings.task) + '</div></div>' +
+        glossary +
         '<div class="grid" id="grid" role="radiogroup" aria-label="Бүтээгдэхүүнүүд">' + cards + '</div>' +
       '</section>' +
       '<div class="choicebar"><div class="choicebar__inner">' +

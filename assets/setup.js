@@ -127,7 +127,7 @@
   function showResult(id, data) {
     var cfg = data.config;
     var link = SITE + '?s=' + id;
-    var bySection = { general: 0, cos: 0, check: 0 };
+    var bySection = { experience: 0, general: 0, cos: 0, check: 0 };
     cfg.questions.forEach(function (q) { bySection[q.section] = (bySection[q.section] || 0) + 1; });
     var closed = data.status === 'closed';
     var full = data.status === 'full';
@@ -153,7 +153,8 @@
           '<dt>Нөхцөл</dt><dd>' + cfg.conditions.map(function (c) { return esc(c.label); }).join(', ') + '</dd>' +
           '<dt>Бүтээгдэхүүн</dt><dd>' + cfg.products.length + ' (бага нөхцөлд ' + cfg.products.filter(function (x) { return x.inSmall; }).length + ')</dd>' +
           '<dt>Үзүүлэлт</dt><dd>' + cfg.attributes.length + ' (бага нөхцөлд ' + cfg.attributes.filter(function (x) { return x.inSmall; }).length + ')</dd>' +
-          '<dt>Асуулт</dt><dd>Ерөнхий ' + bySection.general + ', COS ' + bySection.cos + ', шалгах ' + bySection.check + '</dd>' +
+          '<dt>Асуулт</dt><dd>' + (bySection.experience ? 'Өмнөх туршлага ' + bySection.experience + ', ' : '') + 'COS ' + bySection.cos + ', шалгах ' + bySection.check + ', ерөнхий ' + bySection.general + (cfg.settings.generalPosition === 'start' ? ' (эхэнд)' : '') + '</dd>' +
+          '<dt>Үзүүлэлтийн тайлбар</dt><dd>' + (cfg.attributes.some(function (a) { return a.desc; }) ? 'Бөглөгдсөн' : 'Байхгүй') + '</dd>' +
           '<dt>Нийтэлсэн</dt><dd>' + esc(String(cfg.version || '').replace('T', ' ')) + '</dd>' +
           (nowAssigning ? '<dt>Одоо хуваарилж буй</dt><dd>' + esc(nowAssigning) + '</dd>' : '') +
           (data.assignment ? '<dt>Хуваарилалт</dt><dd>' + esc(data.assignment) + '</dd>' : '') +

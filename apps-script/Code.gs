@@ -8,7 +8,7 @@
  * Гуравдагч этгээдийн сервер рүү юу ч илгээхгүй.
  */
 
-var APP_VERSION = '1.1.0';
+var APP_VERSION = '1.2.0';
 var SITE_URL = '__SITE_URL__';
 
 var SHEET = {
@@ -30,7 +30,11 @@ var SETTINGS_SPEC = [
   ['Танилцуулга', 'intro', 'Энэхүү судалгаа нь хэрэглэгч бүтээгдэхүүн хэрхэн сонгодог талаар судлах зорилготой. Таны хариулт нэрээ нууцалсан хэлбэрээр зөвхөн судалгааны зорилгоор ашиглагдана.', 'Судалгааны зорилго, үргэлжлэх хугацаа, нууцлалын тухай. Өөрийн судалгаанд тохируулж засна.'],
   ['Зөвшөөрлийн текст', 'consent', 'Би судалгааны зорилгыг ойлгосон бөгөөд сайн дураараа оролцохыг зөвшөөрч байна.', 'Чагтлах нүдний хажууд харагдана.'],
   ['Ерөнхий хэсгийн гарчиг', 'generalTitle', 'Ерөнхий мэдээлэл', ''],
+  ['Ерөнхий хэсгийн байрлал', 'generalPosition', 'Төгсгөлд', 'Төгсгөлд: манипуляцийн шалгалтын дараа, илгээхийн өмнө (зөвлөмж). Эхэнд: зөвшөөрлийн дараа.'],
+  ['Туршлагын хэсгийн гарчиг', 'experienceTitle', 'Бүтээгдэхүүний өмнөх туршлага', 'Асуулт хуудсанд "Өмнөх туршлага" хэсгийн асуулт байвал даалгаврын өмнө тусдаа хуудсаар харагдана.'],
+  ['Туршлагын хэсгийн заавар', 'experienceIntro', '', 'Хоосон байж болно.'],
   ['Даалгаврын гарчиг', 'taskTitle', 'Бүтээгдэхүүн сонгох', 'Дөрвөн нөхцөлд ижил харагдана.'],
+  ['Үзүүлэлтийн тайлбарын гарчиг', 'glossaryTitle', 'Үзүүлэлтүүдийн тайлбар', 'Үзүүлэлт хуудасны "Товч тайлбар" бөглөгдсөн үед бүтээгдэхүүний дээр харагдана. 4 үзүүлэлттэй нөхцөлд зөвхөн тэр 4-ийн тайлбар харагдана.'],
   ['Даалгаврын заавар', 'task', 'Та зөөврийн цэнэглэгч худалдаж авах гэж байна гэж төсөөлнө үү. Доорх бүтээгдэхүүнүүдийг харьцуулж, өөрт хамгийн тохиромжтой гэж үзсэн нэгийг сонгоно уу.', 'Дөрвөн нөхцөлд ижил харагдана. Бүтээгдэхүүний тоог энд бичихгүй.'],
   ['COS хэсгийн гарчиг', 'cosTitle', 'Таны сонголтын тухай', ''],
   ['COS хэсгийн заавар', 'cosIntro', 'Сая хийсэн сонголтоо бодож, доорх өгүүлбэр тус бүртэй хэр санал нийлж байгаагаа үнэлнэ үү.', ''],
@@ -47,7 +51,17 @@ var SETTINGS_SPEC = [
   ['Төлөв', 'status', 'Нээлттэй', 'Нээлттэй эсвэл Хаалттай. Хаалттай үед шинэ оролцогч эхлүүлэхгүй (эхэлсэн оролцогч дуусгаж илгээх боломжтой). Хадгалмагц шууд үйлчилнэ.']
 ];
 
-var QUESTION_SECTIONS = { 'Ерөнхий': 'general', 'COS': 'cos', 'Шалгах': 'check' };
+var QUESTION_SECTIONS = { 'Өмнөх туршлага': 'experience', 'COS': 'cos', 'Шалгах': 'check', 'Ерөнхий': 'general' };
+var GENERAL_POSITIONS = { 'Эхэнд': 'start', 'Төгсгөлд': 'end' };
+
+// Тохиргоо хуудасны сонголтын жагсаалттай мөрүүд
+var SETTING_DROPDOWNS = {
+  shuffle: [YES, NO],
+  oncePerDevice: [YES, NO],
+  status: ['Нээлттэй', 'Хаалттай'],
+  likertPoints: ['5', '7'],
+  generalPosition: ['Төгсгөлд', 'Эхэнд']
+};
 var QUESTION_TYPES = { 'Сонголт': 'choice', 'Likert': 'likert', 'Текст': 'text', 'Тоо': 'number' };
 
 // Хариултын хүснэгтийн тогтмол баганууд (дарааллыг өөрчлөхгүй)
@@ -71,6 +85,8 @@ var FIXED_COLUMNS = [
   ['configVersion', 'Тохиргооны хувилбар'],
   ['assignment', 'Хуваарилалт']
 ];
+
+var ATTR_DESC_HEADER = 'Товч тайлбар (оролцогчид харагдана)';
 
 var STARTED_HEADER = ['Оролцогчийн код', 'Нөхцөл', 'Эхэлсэн огноо', 'Дууссан огноо', 'Хуваарилалт'];
 
@@ -154,9 +170,7 @@ function setupSheets() {
       try { ss.deleteSheet(sh); } catch (e) { /* устгах боломжгүй бол үлдээнэ */ }
     }
   });
-  var addedSettings = ensureSettingsRows_();
-  var startedSheet = ss.getSheetByName(SHEET.STARTED);
-  if (startedSheet) ensureStartedHeader_(startedSheet);
+  var migrated = migrateSheets_();
   var first = ss.getSheetByName(SHEET.SETTINGS);
   if (first) first.activate();
 
@@ -164,7 +178,7 @@ function setupSheets() {
   var msg = 'Бэлэн хуудас: ' + ready + ' / ' + SHEET_ORDER.length + '\n\n';
   if (created.length) msg += 'Үүсгэсэн: ' + created.join(', ') + '\n\n';
   if (skipped.length) msg += 'Өгөгдөлтэй тул хөндөөгүй: ' + skipped.join(', ') + '\n\n';
-  if (addedSettings.length) msg += 'Тохиргоо хуудсанд нэмсэн мөр: ' + addedSettings.join(', ') + '\n\n';
+  if (migrated.length) msg += migrated.join('\n') + '\n\n';
   if (failed.length) {
     msg += 'Алдаа гарсан:\n' + failed.join('\n') + '\n\nЭнэ мэдээллийг судалгааны хуудсыг бэлдсэн хүнд илгээнэ үү.';
     ui.alert('Зарим хуудас үүссэнгүй', msg, ui.ButtonSet.OK);
@@ -189,6 +203,7 @@ function ensureSettingsRows_() {
     sh.getRange(r, 1).setFontWeight('bold');
     sh.getRange(r, 2, 1, 2).setWrap(true).setVerticalAlignment('top');
     sh.getRange(r, 3).setFontColor('#5e6a65');
+    if (SETTING_DROPDOWNS[spec[1]]) setDropdown_(sh.getRange(r, 2), SETTING_DROPDOWNS[spec[1]]);
     added.push(spec[0]);
   });
   return added;
@@ -241,25 +256,25 @@ function buildSettingsSheet_(sh) {
   sh.getRange(2, 2, rows.length - 1, 2).setWrap(true).setVerticalAlignment('top');
   sh.getRange(2, 3, rows.length - 1, 1).setFontColor('#5e6a65');
   var keys = SETTINGS_SPEC.map(function (s) { return s[1]; });
-  setDropdown_(sh.getRange(2 + keys.indexOf('shuffle'), 2), [YES, NO]);
-  setDropdown_(sh.getRange(2 + keys.indexOf('oncePerDevice'), 2), [YES, NO]);
-  setDropdown_(sh.getRange(2 + keys.indexOf('status'), 2), ['Нээлттэй', 'Хаалттай']);
-  setDropdown_(sh.getRange(2 + keys.indexOf('likertPoints'), 2), ['5', '7']);
+  Object.keys(SETTING_DROPDOWNS).forEach(function (k) { setDropdown_(sh.getRange(2 + keys.indexOf(k), 2), SETTING_DROPDOWNS[k]); });
   sh.getRange(2 + keys.indexOf('title'), 2).setBackground('#fff4d6');
 }
 
 function buildAttrsSheet_(sh) {
-  var rows = [['Код', 'Үзүүлэлтийн нэр', '4 үзүүлэлттэй нөхцөлд харуулах']];
-  for (var i = 1; i <= 8; i++) rows.push(['У' + i, '', i <= 4 ? YES : NO]);
-  sh.getRange(1, 1, rows.length, 3).setValues(rows);
-  styleHeader_(sh, 3);
+  var rows = [['Код', 'Үзүүлэлтийн нэр', '4 үзүүлэлттэй нөхцөлд харуулах', ATTR_DESC_HEADER]];
+  for (var i = 1; i <= 8; i++) rows.push(['У' + i, '', i <= 4 ? YES : NO, '']);
+  sh.getRange(1, 1, rows.length, 4).setValues(rows);
+  styleHeader_(sh, 4);
   sh.setColumnWidth(1, 70);
-  sh.setColumnWidth(2, 280);
-  sh.setColumnWidth(3, 240);
+  sh.setColumnWidth(2, 240);
+  sh.setColumnWidth(3, 200);
+  sh.setColumnWidth(4, 420);
   sh.getRange(2, 2, 8, 1).setBackground('#fff4d6');
-  setNotes_(sh, 5, [
-    'Үзүүлэлтүүд картан дээр энэ дарааллаар харагдана.',
+  sh.getRange(2, 4, 8, 1).setBackground('#fff4d6').setWrap(true);
+  setNotes_(sh, 6, [
+    'Үзүүлэлтүүд картан дээр болон тайлбарын хэсэгт энэ дарааллаар харагдана.',
     '"4 үзүүлэлттэй нөхцөлд харуулах" баганад бага нөхцөлд харагдах үзүүлэлтийг Тийм гэж тэмдэглэнэ.',
+    'Товч тайлбар: 1 өгүүлбэр, үнэлгээгүй (сайн, муу гэж хэлэхгүй). Хоосон бол тайлбарын хэсэг харагдахгүй.',
     'Үзүүлэлт нэмбэл энд мөр нэмж, Бүтээгдэхүүн хуудсанд мөн багана нэмнэ.'
   ]);
   setDropdown_(sh.getRange(2, 3, 8, 1), [YES, NO]);
@@ -308,15 +323,46 @@ function buildQuestionsSheet_(sh) {
   // Тайлбарыг асуултын баганаас тусад нь (H баганад) бичнэ. Dropdown-тэй нүдэнд текст бичихгүй.
   setNotes_(sh, 8, [
     'Асуулт нэмэх: шинэ мөр нэмээд Хэсэг, Код, Асуулт, Төрлийг бөглөнө. Кодыг өөрчлөх шаардлагагүй. Дараа нь "2. Тохиргоог шалгаж нийтлэх" цэсийг дахин дарна.',
+    'Хуудасны дараалал: Өмнөх туршлага > Бүтээгдэхүүн сонгох > COS > Шалгах > Ерөнхий. Ерөнхий хэсгийг Тохиргоо хуудаснаас эхэнд шилжүүлж болно.',
     'Асуултууд хэсэг бүрийн дотор энэ хүснэгтийн дарааллаар харагдана.',
     'Сонголт төрөл: сонголтуудыг цэг таслалаар (;) тусгаарлана. Жишээ: Эрэгтэй; Эмэгтэй',
     'Likert төрөл: хоосон бол Тохиргоо хуудасны хэмжүүрийг ашиглана. Өөр хэмжүүр хэрэгтэй бол: 7; Маш цөөн; Маш олон',
     'Код: хариултын хүснэгтийн баганын нэр болно. Давхардахгүй, латин үсэг ба тоо ашиглахыг зөвлөе (жишээ: BOLOVSROL).',
     '[ ] хаалттай текстийг өөрийн асуултаар солихгүй бол нийтлэх үед алдаа заана.'
   ]);
-  setDropdown_(sh.getRange(2, 1, 100, 1), Object.keys(QUESTION_SECTIONS));
-  setDropdown_(sh.getRange(2, 4, 100, 1), Object.keys(QUESTION_TYPES));
-  setDropdown_(sh.getRange(2, 6, 100, 1), [YES, NO]);
+  setQuestionDropdowns_(sh);
+}
+
+function setQuestionDropdowns_(sh) {
+  var n = Math.max(sh.getLastRow(), 1) + 100;
+  setDropdown_(sh.getRange(2, 1, n, 1), Object.keys(QUESTION_SECTIONS));
+  setDropdown_(sh.getRange(2, 4, n, 1), Object.keys(QUESTION_TYPES));
+  setDropdown_(sh.getRange(2, 6, n, 1), [YES, NO]);
+}
+
+/**
+ * Хуучин хувилбараар үүссэн хуудсуудыг шинэ бүтэцтэй нийцүүлнэ.
+ * Өгөгдлийг хөндөхгүй: зөвхөн толгой мөр, сонголтын жагсаалтыг шинэчилнэ.
+ */
+function migrateSheets_() {
+  var ss = SpreadsheetApp.getActive();
+  var notes = [];
+  var added = ensureSettingsRows_();
+  if (added.length) notes.push('Тохиргоо хуудсанд нэмсэн мөр: ' + added.join(', '));
+  var q = ss.getSheetByName(SHEET.QUESTIONS);
+  // Хуучин хувилбарын жагсаалт шинэ хэсгийн нэрийг хориглодог байсан
+  if (q && q.getLastRow() > 0) setQuestionDropdowns_(q);
+  var a = ss.getSheetByName(SHEET.ATTRS);
+  if (a && a.getLastRow() > 0 && !String(a.getRange(1, 4).getDisplayValue()).trim()) {
+    a.getRange(1, 4).setValue(ATTR_DESC_HEADER).setFontWeight('bold').setBackground('#e6ece9').setWrap(true);
+    a.setColumnWidth(4, 420);
+    var last = Math.max(a.getLastRow(), 2);
+    a.getRange(2, 4, Math.min(last - 1, 8), 1).setBackground('#fff4d6').setWrap(true);
+    notes.push('Үзүүлэлт хуудсанд "Товч тайлбар" багана (D) нэмсэн');
+  }
+  var st = ss.getSheetByName(SHEET.STARTED);
+  if (st) ensureStartedHeader_(st);
+  return notes;
 }
 
 function styleHeader_(sh, cols) {
@@ -339,7 +385,7 @@ function setDropdown_(range, values) {
 function publishConfig() {
   var ui = SpreadsheetApp.getUi();
   var ss = SpreadsheetApp.getActive();
-  ensureSettingsRows_();
+  migrateSheets_();
   var missing = [SHEET.SETTINGS, SHEET.ATTRS, SHEET.PRODUCTS, SHEET.QUESTIONS].filter(function (n) { return !ss.getSheetByName(n); });
   if (missing.length) {
     ui.alert('Хуудас дутуу', 'Дараах хуудас олдсонгүй: ' + missing.join(', ') + '\n\nЭхлээд "1. Загвар хуудсуудыг үүсгэх" цэсийг ажиллуулна уу.', ui.ButtonSet.OK);
@@ -428,11 +474,17 @@ function buildConfig_(raw, imageResolver) {
   var points = parseInt(settings.likertPoints, 10);
   if ([5, 7].indexOf(points) < 0) { errors.push('Тохиргоо: "Likert түвшний тоо" 5 эсвэл 7 байх ёстой.'); points = 7; }
   var status = t(settings.status) === 'Хаалттай' ? 'closed' : 'open';
+  var generalPosition = GENERAL_POSITIONS[t(settings.generalPosition)];
+  if (!generalPosition) { errors.push('Тохиргоо: "Ерөнхий хэсгийн байрлал" нь Эхэнд эсвэл Төгсгөлд байх ёстой.'); generalPosition = 'end'; }
   var cfgSettings = {
     title: settings.title,
     intro: settings.intro,
     consent: settings.consent || 'Би судалгаанд оролцохыг зөвшөөрч байна.',
     generalTitle: settings.generalTitle,
+    generalPosition: generalPosition,
+    experienceTitle: settings.experienceTitle,
+    experienceIntro: settings.experienceIntro,
+    glossaryTitle: settings.glossaryTitle,
     taskTitle: settings.taskTitle,
     task: settings.task,
     cosTitle: settings.cosTitle,
@@ -457,9 +509,15 @@ function buildConfig_(raw, imageResolver) {
     if (attrCodes[code]) { errors.push('Үзүүлэлт: "' + code + '" код давхардсан.'); return; }
     if (!name) { errors.push('Үзүүлэлт ' + code + ': нэр хоосон байна.'); return; }
     attrCodes[code] = true;
-    attributes.push({ code: code, name: name, inSmall: isYes(r[2]) });
+    var desc = t(r[3]);
+    if (desc.length > 300) warnings.push('Үзүүлэлт ' + code + ': тайлбар ' + desc.length + ' тэмдэгт. 1 өгүүлбэрт (150 орчим тэмдэгт) багтаахыг зөвлөе.');
+    attributes.push({ code: code, name: name, inSmall: isYes(r[2]), desc: desc });
   });
   var nAttrSmall = attributes.filter(function (a) { return a.inSmall; }).length;
+  var nDesc = attributes.filter(function (a) { return a.desc; }).length;
+  if (nDesc && nDesc < attributes.length) {
+    errors.push('Үзүүлэлт: товч тайлбар ' + attributes.length + '-аас ' + nDesc + '-д нь л бөглөгдсөн. Нөхцөлүүдийг тэнцүү байлгахын тулд бүгдийг бөглөх эсвэл бүгдийг хоосон үлдээнэ.');
+  }
   if (attributes.length < 2) errors.push('Үзүүлэлт: дор хаяж 2 үзүүлэлт шаардлагатай.');
   if (attributes.length && (nAttrSmall < 1 || nAttrSmall >= attributes.length)) {
     errors.push('Үзүүлэлт: "4 үзүүлэлттэй нөхцөлд харуулах" баганад 1-ээс ' + (attributes.length - 1) + ' хүртэлх мөрийг Тийм гэж тэмдэглэнэ. Одоо ' + nAttrSmall + ' байна.');
@@ -517,7 +575,7 @@ function buildConfig_(raw, imageResolver) {
     if (!sectionLabel && !code && !text) return;
     if (!QUESTION_SECTIONS[sectionLabel]) {
       if (!code && !t(r[3])) return; // тайлбар мөр
-      errors.push('Асуулт ' + (i + 2) + ' дугаар мөр: "Хэсэг" нь Ерөнхий, COS, Шалгах-ын аль нэг байх ёстой.');
+      errors.push('Асуулт ' + (i + 2) + ' дугаар мөр: "Хэсэг" нь ' + Object.keys(QUESTION_SECTIONS).join(', ') + '-ын аль нэг байх ёстой (одоо: "' + sectionLabel + '").');
       return;
     }
     var label = 'Асуулт ' + (code || ((i + 2) + ' дугаар мөр'));
