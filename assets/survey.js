@@ -16,6 +16,11 @@
   var $stepText = document.getElementById('stepText');
   var $progress = document.getElementById('progressBar');
 
+  var CLOSED_TITLE = 'Судалгаа хаагдсан байна';
+  var CLOSED_BODY = 'Энэ судалгаанд хариулт авах хугацаа дууссан. Сонирхсонд баярлалаа.';
+  var FULL_TITLE = 'Оролцогчийн тоо бүрдсэн';
+  var FULL_BODY = 'Энэ судалгаанд шаардлагатай оролцогчдын тоо бүрдсэн байна. Сонирхсонд баярлалаа.';
+
   var CFG = null;   // нийтэлсэн тохиргоо
   var S = null;     // оролцогчийн төлөв
   var STEPS = [];
@@ -241,7 +246,8 @@
       var begin = PREVIEW ? Promise.resolve({ ok: true, pid: 'PREVIEW', condition: S.condition }) : startWithRetry();
       begin.then(function (res) {
         if (!res || !res.ok) {
-          if (res && res.error === 'closed') return renderNotice('Судалгаа хаагдсан байна', 'Энэ судалгаанд хариулт авах хугацаа дууссан. Сонирхсонд баярлалаа.');
+          if (res && res.error === 'closed') return renderNotice(CLOSED_TITLE, CLOSED_BODY);
+          if (res && res.error === 'full') return renderNotice(FULL_TITLE, FULL_BODY);
           throw serverError(res);
         }
         if (!conditionById(res.condition)) throw new Error('unknown_condition');
@@ -588,11 +594,14 @@
       document.title = CFG.settings.title || 'Судалгаа';
       $topTitle.textContent = CFG.settings.title || 'Судалгаа';
 
-      if (res.status === 'closed' && !PREVIEW) {
-        return renderNotice('Судалгаа хаагдсан байна', 'Энэ судалгаанд хариулт авах хугацаа дууссан. Сонирхсонд баярлалаа.');
+      var saved = store.load();
+      // Эхэлсэн оролцогч судалгаа хаагдсан ч дуусгаж илгээх боломжтой
+      var inProgress = saved && saved.pid && !saved.completed && saved.configVersion === (CFG.version || '');
+      if (!PREVIEW && !inProgress) {
+        if (res.status === 'closed') return renderNotice(CLOSED_TITLE, CLOSED_BODY);
+        if (res.status === 'full') return renderNotice(FULL_TITLE, FULL_BODY);
       }
 
-      var saved = store.load();
       if (saved && saved.completed) {
         if (CFG.settings.oncePerDevice) {
           S = saved;

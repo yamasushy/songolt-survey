@@ -8,7 +8,7 @@
  * Гуравдагч этгээдийн сервер рүү юу ч илгээхгүй.
  */
 
-var APP_VERSION = '1.0.2';
+var APP_VERSION = '1.1.0';
 var SITE_URL = '__SITE_URL__';
 
 var SHEET = {
@@ -42,7 +42,9 @@ var SETTINGS_SPEC = [
   ['Likert дээд утгын тайлбар', 'likertHigh', 'Бүрэн санал нийлнэ', ''],
   ['Бүтээгдэхүүний дарааллыг холих', 'shuffle', YES, 'Тийм: оролцогч бүрт санамсаргүй дараалал (байрлалын нөлөөг тэнцвэржүүлнэ). Үгүй: хүснэгтийн дарааллаар.'],
   ['Нэг төхөөрөмжөөс дахин бөглөхийг хориглох', 'oncePerDevice', YES, 'Нэг компьютер дээр олон хүн бөглөх бол Үгүй болгоно.'],
-  ['Төлөв', 'status', 'Нээлттэй', 'Нээлттэй эсвэл Хаалттай. Хаалттай үед шинэ хариулт хүлээж авахгүй.']
+  ['Нөхцөл тус бүрийн зорилтот тоо', 'target', '', 'Нөхцөл бүрт хэдэн оролцогч бүрэн бөглөх ёстой вэ. Жишээ: 40. Хүрсэн нөхцөл автоматаар хаагдаж, оролцогчид дутуу нөхцөлд очно. Хоосон бол хязгааргүй. Хадгалмагц шууд үйлчилнэ.'],
+  ['Нээлттэй нөхцөл', 'openConditions', '', 'Хоосон бол бүх нөхцөл. Зөвхөн тодорхой нөхцөлд оролцогч нэмэх бол бичнэ. Жишээ: 18x8 эсвэл 6x8, 18x8. Хадгалмагц шууд үйлчилнэ.'],
+  ['Төлөв', 'status', 'Нээлттэй', 'Нээлттэй эсвэл Хаалттай. Хаалттай үед шинэ оролцогч эхлүүлэхгүй (эхэлсэн оролцогч дуусгаж илгээх боломжтой). Хадгалмагц шууд үйлчилнэ.']
 ];
 
 var QUESTION_SECTIONS = { 'Ерөнхий': 'general', 'COS': 'cos', 'Шалгах': 'check' };
@@ -66,10 +68,15 @@ var FIXED_COLUMNS = [
   ['viewportWidth', 'Дэлгэцийн өргөн (px)'],
   ['totalSec', 'Нийт хугацаа (сек)'],
   ['reloads', 'Хуудас дахин ачаалсан тоо'],
-  ['configVersion', 'Тохиргооны хувилбар']
+  ['configVersion', 'Тохиргооны хувилбар'],
+  ['assignment', 'Хуваарилалт']
 ];
 
-var STARTED_HEADER = ['Оролцогчийн код', 'Нөхцөл', 'Эхэлсэн огноо', 'Дууссан огноо'];
+var STARTED_HEADER = ['Оролцогчийн код', 'Нөхцөл', 'Эхэлсэн огноо', 'Дууссан огноо', 'Хуваарилалт'];
+
+// Эхэлсэн боловч дуусаагүй оролцогчийг энэ хугацааны турш "явж байгаа" гэж тооцно.
+// Үүнээс хойш дуусаагүй бол орхисон гэж үзээд тухайн нөхцөлд шинэ оролцогч хуваарилна.
+var IN_PROGRESS_MINUTES = 30;
 
 var SHEET_ORDER = [SHEET.SETTINGS, SHEET.ATTRS, SHEET.PRODUCTS, SHEET.QUESTIONS, SHEET.RESPONSES, SHEET.STARTED, SHEET.SUMMARY];
 
@@ -87,8 +94,6 @@ function onOpen() {
     .addItem('1. Загвар хуудсуудыг үүсгэх', 'setupSheets')
     .addItem('2. Тохиргоог шалгаж нийтлэх', 'publishConfig')
     .addItem('3. Оролцогчийн холбоос харах', 'showParticipantLink')
-    .addSeparator()
-    .addItem('Хуваарилалтын тоолуурыг тэглэх', 'resetAssignmentCounts')
     .addToUi();
 }
 
@@ -149,6 +154,9 @@ function setupSheets() {
       try { ss.deleteSheet(sh); } catch (e) { /* устгах боломжгүй бол үлдээнэ */ }
     }
   });
+  var addedSettings = ensureSettingsRows_();
+  var startedSheet = ss.getSheetByName(SHEET.STARTED);
+  if (startedSheet) ensureStartedHeader_(startedSheet);
   var first = ss.getSheetByName(SHEET.SETTINGS);
   if (first) first.activate();
 
@@ -156,6 +164,7 @@ function setupSheets() {
   var msg = 'Бэлэн хуудас: ' + ready + ' / ' + SHEET_ORDER.length + '\n\n';
   if (created.length) msg += 'Үүсгэсэн: ' + created.join(', ') + '\n\n';
   if (skipped.length) msg += 'Өгөгдөлтэй тул хөндөөгүй: ' + skipped.join(', ') + '\n\n';
+  if (addedSettings.length) msg += 'Тохиргоо хуудсанд нэмсэн мөр: ' + addedSettings.join(', ') + '\n\n';
   if (failed.length) {
     msg += 'Алдаа гарсан:\n' + failed.join('\n') + '\n\nЭнэ мэдээллийг судалгааны хуудсыг бэлдсэн хүнд илгээнэ үү.';
     ui.alert('Зарим хуудас үүссэнгүй', msg, ui.ButtonSet.OK);
@@ -163,6 +172,37 @@ function setupSheets() {
   }
   msg += 'Дараагийн алхам: Тохиргоо, Үзүүлэлт, Бүтээгдэхүүн, Асуулт хуудсуудыг бөглөөд "2. Тохиргоог шалгаж нийтлэх" цэсийг дарна уу.';
   ui.alert('Загвар бэлэн боллоо', msg, ui.ButtonSet.OK);
+}
+
+/**
+ * Хуучин хувилбараар үүссэн Тохиргоо хуудсанд шинэ тохиргооны мөрийг нэмнэ.
+ */
+function ensureSettingsRows_() {
+  var sh = SpreadsheetApp.getActive().getSheetByName(SHEET.SETTINGS);
+  if (!sh || sh.getLastRow() === 0) return [];
+  var labels = sh.getRange(1, 1, sh.getLastRow(), 1).getDisplayValues().map(function (r) { return String(r[0]).trim(); });
+  var added = [];
+  SETTINGS_SPEC.forEach(function (spec) {
+    if (labels.indexOf(spec[0]) >= 0) return;
+    var r = sh.getLastRow() + 1;
+    sh.getRange(r, 1, 1, 3).setValues([[spec[0], spec[2], spec[3]]]);
+    sh.getRange(r, 1).setFontWeight('bold');
+    sh.getRange(r, 2, 1, 2).setWrap(true).setVerticalAlignment('top');
+    sh.getRange(r, 3).setFontColor('#5e6a65');
+    added.push(spec[0]);
+  });
+  return added;
+}
+
+function ensureStartedHeader_(sh) {
+  var lc = Math.max(sh.getLastColumn(), STARTED_HEADER.length);
+  var header = sh.getRange(1, 1, 1, lc).getDisplayValues()[0];
+  var changed = false;
+  STARTED_HEADER.forEach(function (h, i) { if (!header[i]) { header[i] = h; changed = true; } });
+  if (changed) {
+    sh.getRange(1, 1, 1, header.length).setValues([header]);
+    styleHeader_(sh, header.length);
+  }
 }
 
 function buildResponsesSheet_(sh) {
@@ -299,6 +339,7 @@ function setDropdown_(range, values) {
 function publishConfig() {
   var ui = SpreadsheetApp.getUi();
   var ss = SpreadsheetApp.getActive();
+  ensureSettingsRows_();
   var missing = [SHEET.SETTINGS, SHEET.ATTRS, SHEET.PRODUCTS, SHEET.QUESTIONS].filter(function (n) { return !ss.getSheetByName(n); });
   if (missing.length) {
     ui.alert('Хуудас дутуу', 'Дараах хуудас олдсонгүй: ' + missing.join(', ') + '\n\nЭхлээд "1. Загвар хуудсуудыг үүсгэх" цэсийг ажиллуулна уу.', ui.ButtonSet.OK);
@@ -332,15 +373,16 @@ function publishConfig() {
 
   var props = PropertiesService.getScriptProperties();
   props.setProperty('VALIDATION', JSON.stringify(result.validation));
-  // Нөхцөлийн жагсаалт өөрчлөгдвөл тоолуурыг шинэчлэх
-  var counts = JSON.parse(props.getProperty('STARTED_COUNTS') || '{}');
-  var nextCounts = {};
-  config.conditions.forEach(function (c) { nextCounts[c.id] = counts[c.id] || 0; });
-  props.setProperty('STARTED_COUNTS', JSON.stringify(nextCounts));
 
   ensureResponseHeaders_(result.validation.questionCodes);
-  getSheet_(SHEET.STARTED);
+  ensureStartedHeader_(getSheet_(SHEET.STARTED));
   buildSummarySheet_(config.conditions);
+
+  // Шууд үйлчлэх тохиргоог (зорилт, нээлттэй нөхцөл) шалгана
+  var ids = config.conditions.map(function (c) { return c.id; });
+  var live = liveSettings_();
+  var avail = availableConditions_(ids, live, tallyStarted_([], ids, Date.now(), IN_PROGRESS_MINUTES));
+  if (avail.error) result.warnings.unshift(avail.error + ' Засахгүй бол шинэ оролцогч эхлүүлж чадахгүй.');
 
   var msg = 'Нөхцөл: ' + config.conditions.map(function (c) { return c.id; }).join(', ') + '\n' +
     'Бүтээгдэхүүн: ' + config.products.length + ', үзүүлэлт: ' + config.attributes.length + ', асуулт: ' + config.questions.length + '\n' +
@@ -625,7 +667,9 @@ function buildSummarySheet_(conditions) {
   sh.clear();
   var resp = "'" + SHEET.RESPONSES + "'";
   var started = "'" + SHEET.STARTED + "'";
-  var rows = [['Нөхцөл', 'Эхэлсэн', 'Дууссан', 'Дуусгасан хувь', 'Шийдвэрийн дундаж хугацаа (сек)']];
+  var settings = "'" + SHEET.SETTINGS + "'";
+  var targetLabel = settingLabel_('target');
+  var rows = [['Нөхцөл', 'Эхэлсэн', 'Дууссан', 'Дуусгасан хувь', 'Шийдвэрийн дундаж хугацаа (сек)', 'Зорилт', 'Дутуу']];
   conditions.forEach(function (c, i) {
     var r = i + 2;
     rows.push([
@@ -633,19 +677,26 @@ function buildSummarySheet_(conditions) {
       '=COUNTIF(' + started + '!B:B,A' + r + ')',
       '=COUNTIF(' + resp + '!C:C,A' + r + ')',
       '=IFERROR(C' + r + '/B' + r + ',"")',
-      '=IFERROR(AVERAGEIF(' + resp + '!C:C,A' + r + ',' + resp + '!I:I),"")'
+      '=IFERROR(AVERAGEIF(' + resp + '!C:C,A' + r + ',' + resp + '!I:I),"")',
+      '=IFERROR(VALUE(VLOOKUP("' + targetLabel + '",' + settings + '!A:B,2,FALSE)),"")',
+      '=IF(F' + r + '="","",MAX(0,F' + r + '-C' + r + '))'
     ]);
   });
   var n = conditions.length + 2;
-  rows.push(['Нийт', '=SUM(B2:B' + (n - 1) + ')', '=SUM(C2:C' + (n - 1) + ')', '=IFERROR(C' + n + '/B' + n + ',"")', '=IFERROR(AVERAGE(' + resp + '!I2:I),"")']);
-  sh.getRange(1, 1, rows.length, 5).setValues(rows);
-  styleHeader_(sh, 5);
+  rows.push(['Нийт', '=SUM(B2:B' + (n - 1) + ')', '=SUM(C2:C' + (n - 1) + ')', '=IFERROR(C' + n + '/B' + n + ',"")', '=IFERROR(AVERAGE(' + resp + '!I2:I),"")',
+    '=IF(COUNT(F2:F' + (n - 1) + ')=0,"",SUM(F2:F' + (n - 1) + '))', '=IF(COUNT(G2:G' + (n - 1) + ')=0,"",SUM(G2:G' + (n - 1) + '))']);
+  sh.getRange(1, 1, rows.length, 7).setValues(rows);
+  styleHeader_(sh, 7);
   sh.getRange(2, 4, rows.length - 1, 1).setNumberFormat('0%');
   sh.getRange(2, 5, rows.length - 1, 1).setNumberFormat('0.0');
-  sh.getRange(rows.length, 1, 1, 5).setFontWeight('bold');
+  sh.getRange(rows.length, 1, 1, 7).setFontWeight('bold');
   sh.setColumnWidth(1, 120);
-  sh.setColumnWidths(2, 4, 170);
-  sh.getRange(rows.length + 2, 1).setValue('Эхэлсэн: зөвшөөрлөө өгч нөхцөлд хуваарилагдсан оролцогч. Дууссан: бүх асуултад хариулж илгээсэн оролцогч.').setFontColor('#5e6a65');
+  sh.setColumnWidths(2, 6, 150);
+  sh.getRange(rows.length + 2, 1, 3, 1).setValues([
+    ['Эхэлсэн: зөвшөөрлөө өгч нөхцөлд хуваарилагдсан оролцогч. Дууссан: бүх асуултад хариулж илгээсэн оролцогч.'],
+    ['Зорилт, Дутуу: Тохиргоо хуудасны "' + targetLabel + '" бөглөгдсөн үед харагдана.'],
+    ['Шинэ оролцогч дууссан болон сүүлийн ' + IN_PROGRESS_MINUTES + ' минутад эхэлсэн оролцогчийн тоо хамгийн бага нөхцөлд хуваарилагдана.']
+  ]).setFontColor('#5e6a65');
 }
 
 /* ----------------------------------------------------------------------
@@ -684,17 +735,6 @@ function showParticipantLink() {
   ui.alert('Холбоос', msg, ui.ButtonSet.OK);
 }
 
-function resetAssignmentCounts() {
-  var ui = SpreadsheetApp.getUi();
-  var ok = ui.alert('Тоолуурыг тэглэх үү?', 'Туршилтын хариултуудаа устгасны дараа жинхэнэ цуглуулалт эхлэхийн өмнө ашиглана. "Эхэлсэн" хуудасны мөрүүдийг гараар устгана уу. Хариултын өгөгдөлд нөлөөлөхгүй.', ui.ButtonSet.YES_NO);
-  if (ok !== ui.Button.YES) return;
-  var props = PropertiesService.getScriptProperties();
-  var counts = JSON.parse(props.getProperty('STARTED_COUNTS') || '{}');
-  Object.keys(counts).forEach(function (k) { counts[k] = 0; });
-  props.setProperty('STARTED_COUNTS', JSON.stringify(counts));
-  ui.alert('Тоолуурыг тэглэлээ.');
-}
-
 /* ----------------------------------------------------------------------
  * Веб апп (оролцогчийн хуудас эндээс өгөгдөл авна)
  * -------------------------------------------------------------------- */
@@ -724,24 +764,107 @@ function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function liveStatus_() {
+function settingLabel_(key) {
+  for (var i = 0; i < SETTINGS_SPEC.length; i++) if (SETTINGS_SPEC[i][1] === key) return SETTINGS_SPEC[i][0];
+  return '';
+}
+
+/**
+ * Нийтлэхгүйгээр шууд үйлчлэх тохиргоо (төлөв, зорилтот тоо, нээлттэй нөхцөл).
+ */
+function liveSettings_() {
   var rows = readSheet_(SHEET.SETTINGS);
-  for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim() === 'Төлөв') return String(rows[i][1]).trim() === 'Хаалттай' ? 'closed' : 'open';
+  var byLabel = {};
+  for (var i = 1; i < rows.length; i++) byLabel[String(rows[i][0]).trim()] = String(rows[i][1]).trim();
+  return {
+    status: byLabel[settingLabel_('status')] === 'Хаалттай' ? 'closed' : 'open',
+    target: byLabel[settingLabel_('target')] || '',
+    open: byLabel[settingLabel_('openConditions')] || ''
+  };
+}
+
+/**
+ * Цэвэр функц: "18 x 8", "18×8", "18х8" (кирилл х) зэргийг "18x8" болгоно.
+ */
+function normalizeCondition_(s) {
+  return String(s || '').toLowerCase().replace(/[\u00d7\u0445*]/g, 'x').replace(/\s+/g, '');
+}
+
+/**
+ * Цэвэр функц: Эхэлсэн хуудасны мөрүүдээс нөхцөл тус бүрийн тоог гаргана.
+ * done: дууссан, active: сүүлийн windowMin минутад эхэлсэн боловч дуусаагүй.
+ */
+function tallyStarted_(rows, ids, nowMs, windowMin) {
+  var t = {};
+  ids.forEach(function (id) { t[id] = { started: 0, done: 0, active: 0 }; });
+  rows.forEach(function (r) {
+    var c = String(r[1]);
+    if (!t[c]) return;
+    t[c].started++;
+    if (r[3]) { t[c].done++; return; }
+    var s = r[2] && typeof r[2].getTime === 'function' ? r[2].getTime() : Date.parse(r[2]);
+    if (s && nowMs - s < windowMin * 60000) t[c].active++;
+  });
+  return t;
+}
+
+/**
+ * Цэвэр функц: шинэ оролцогчид хуваарилж болох нөхцөлүүдийг тодорхойлно.
+ */
+function availableConditions_(ids, live, tally) {
+  var res = { candidates: [], error: '', mode: 'Бүх нөхцөл', full: [] };
+  var pool = ids.slice();
+  if (live.open) {
+    var wanted = live.open.split(/[,;]/).map(normalizeCondition_).filter(function (x) { return x; });
+    var bad = wanted.filter(function (w) { return ids.indexOf(w) < 0; });
+    if (bad.length || !wanted.length) {
+      res.error = 'Тохиргоо: "' + settingLabel_('openConditions') + '" буруу (' + (bad.join(', ') || live.open) + '). Боломжит утга: ' + ids.join(', ') + '.';
+      return res;
+    }
+    pool = ids.filter(function (id) { return wanted.indexOf(id) >= 0; });
+    res.mode = 'Хязгаарласан: ' + pool.join(', ');
   }
-  return 'open';
+  if (live.target) {
+    var target = Number(String(live.target).replace(/\s/g, ''));
+    if (!(target > 0) || Math.floor(target) !== target) {
+      res.error = 'Тохиргоо: "' + settingLabel_('target') + '" эерэг бүхэл тоо байх ёстой (одоо: ' + live.target + ').';
+      return res;
+    }
+    res.full = pool.filter(function (id) { return tally[id].done + tally[id].active >= target; });
+    pool = pool.filter(function (id) { return res.full.indexOf(id) < 0; });
+    if (res.full.length) res.mode += '; дүүрсэн: ' + res.full.join(', ');
+  }
+  res.candidates = pool;
+  return res;
+}
+
+function allocationState_(validation) {
+  var ids = Object.keys(validation.conditions);
+  var live = liveSettings_();
+  var sh = getSheet_(SHEET.STARTED);
+  var lr = sh.getLastRow();
+  var rows = lr > 1 ? sh.getRange(2, 1, lr - 1, 4).getValues() : [];
+  var tally = tallyStarted_(rows, ids, Date.now(), IN_PROGRESS_MINUTES);
+  return { ids: ids, live: live, tally: tally, avail: availableConditions_(ids, live, tally), sheet: sh };
 }
 
 function configOutput_() {
-  var id = PropertiesService.getScriptProperties().getProperty('CONFIG_FILE_ID');
-  if (!id) return json_({ ok: false, error: 'not_published' });
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('CONFIG_FILE_ID');
+  var validation = JSON.parse(props.getProperty('VALIDATION') || 'null');
+  if (!id || !validation) return json_({ ok: false, error: 'not_published' });
   var raw;
   try {
     raw = DriveApp.getFileById(id).getBlob().getDataAsString('UTF-8');
   } catch (err) {
     return json_({ ok: false, error: 'not_published' });
   }
-  var text = '{"ok":true,"status":"' + liveStatus_() + '","backend":"' + APP_VERSION + '","config":' + raw + '}';
+  var st = allocationState_(validation);
+  var status = st.live.status;
+  if (status === 'open' && !st.avail.error && !st.avail.candidates.length) status = 'full';
+  var meta = { status: status, backend: APP_VERSION, available: st.avail.candidates, assignment: st.avail.error || st.avail.mode };
+  var text = JSON.stringify(meta);
+  text = '{"ok":true,' + text.slice(1, -1) + ',"config":' + raw + '}';
   return ContentService.createTextOutput(text).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -756,22 +879,24 @@ function chooseCondition_(ids, counts, rand) {
 }
 
 function startParticipant_() {
-  if (liveStatus_() === 'closed') return { ok: false, error: 'closed' };
   var props = PropertiesService.getScriptProperties();
   var validation = JSON.parse(props.getProperty('VALIDATION') || 'null');
   if (!validation) return { ok: false, error: 'not_published' };
-  var ids = Object.keys(validation.conditions);
 
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    var counts = JSON.parse(props.getProperty('STARTED_COUNTS') || '{}');
-    var condition = chooseCondition_(ids, counts, Math.random);
-    counts[condition] = (counts[condition] || 0) + 1;
-    props.setProperty('STARTED_COUNTS', JSON.stringify(counts));
+    var st = allocationState_(validation);
+    if (st.live.status === 'closed') return { ok: false, error: 'closed' };
+    if (st.avail.error) return { ok: false, error: 'bad_settings', message: st.avail.error };
+    if (!st.avail.candidates.length) return { ok: false, error: 'full' };
+    // Дууссан + одоо бөглөж буй оролцогч хамгийн цөөн нөхцөлийг сонгоно (тэнцвэл санамсаргүй)
+    var load = {};
+    st.avail.candidates.forEach(function (c) { load[c] = st.tally[c].done + st.tally[c].active; });
+    var condition = chooseCondition_(st.avail.candidates, load, Math.random);
     var pid = Utilities.getUuid().replace(/-/g, '').slice(0, 12).toUpperCase();
-    var sh = getSheet_(SHEET.STARTED);
-    sh.appendRow([pid, condition, new Date(), '']);
+    ensureStartedHeader_(st.sheet);
+    st.sheet.appendRow([pid, condition, new Date(), '', st.avail.mode]);
     return { ok: true, pid: pid, condition: condition };
   } finally {
     lock.releaseLock();
@@ -800,7 +925,7 @@ function num_(v, digits) {
 /**
  * Цэвэр функц: илгээсэн өгөгдлөөс хүснэгтийн мөрийн утгуудыг гаргана.
  */
-function buildResponseRecord_(body, validation, now) {
+function buildResponseRecord_(body, validation, now, assignment) {
   var cond = validation.conditions[body.condition];
   if (!cond) return { error: 'bad_condition' };
   var choice = String(body.choiceCode || '');
@@ -823,7 +948,8 @@ function buildResponseRecord_(body, validation, now) {
     viewportWidth: num_(body.viewportWidth, 0),
     totalSec: num_(body.totalSec, 1),
     reloads: num_(body.reloads, 0),
-    configVersion: cleanCell_(body.configVersion)
+    configVersion: cleanCell_(body.configVersion),
+    assignment: cleanCell_(assignment || '')
   };
   var byHeader = {};
   FIXED_COLUMNS.forEach(function (c) { byHeader[c[1]] = rec[c[0]]; });
@@ -835,7 +961,7 @@ function buildResponseRecord_(body, validation, now) {
 }
 
 function saveResponse_(body) {
-  if (liveStatus_() === 'closed') return { ok: false, error: 'closed' };
+  // Судалгаа хаагдсан ч эхэлсэн оролцогчийн хариултыг хүлээн авна
   var props = PropertiesService.getScriptProperties();
   var validation = JSON.parse(props.getProperty('VALIDATION') || 'null');
   if (!validation) return { ok: false, error: 'not_published' };
@@ -850,12 +976,12 @@ function saveResponse_(body) {
     var cell = started.getRange('A:A').createTextFinder(pid).matchEntireCell(true).findNext();
     if (!cell) return { ok: false, error: 'unknown_participant' };
     var row = cell.getRow();
-    var startedRow = started.getRange(row, 1, 1, 4).getValues()[0];
+    var startedRow = started.getRange(row, 1, 1, 5).getValues()[0];
     if (startedRow[3]) return { ok: true, duplicate: true };
     if (String(startedRow[1]) !== String(body.condition)) return { ok: false, error: 'condition_mismatch' };
 
     var now = new Date();
-    var built = buildResponseRecord_(body, validation, now);
+    var built = buildResponseRecord_(body, validation, now, startedRow[4]);
     if (built.error) return { ok: false, error: built.error };
 
     var sh = getSheet_(SHEET.RESPONSES);

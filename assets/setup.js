@@ -130,6 +130,12 @@
     var bySection = { general: 0, cos: 0, check: 0 };
     cfg.questions.forEach(function (q) { bySection[q.section] = (bySection[q.section] || 0) + 1; });
     var closed = data.status === 'closed';
+    var full = data.status === 'full';
+    var badge = closed ? '<span class="badge badge--closed">Хаалттай</span>' : full ? '<span class="badge badge--closed">Дүүрсэн</span>' : '<span class="badge">Нээлттэй</span>';
+    var labelOf = function (id) { var c = cfg.conditions.filter(function (x) { return x.id === id; })[0]; return c ? c.label : id; };
+    var nowAssigning = Array.isArray(data.available)
+      ? (data.available.length ? data.available.map(labelOf).join(', ') : 'Аль ч нөхцөлд хуваарилахгүй')
+      : '';
     var outdated = latestVersion && data.backend !== latestVersion;
     var outdatedHtml = outdated
       ? '<div class="callout"><p><strong>Web app хуучин кодоор ажиллаж байна' + (data.backend ? ' (' + esc(data.backend) + ')' : '') + '.</strong> ' +
@@ -141,7 +147,7 @@
 
     out.innerHTML =
       '<div class="result result--ok">' +
-        '<h3>Холболт амжилттай <span class="badge' + (closed ? ' badge--closed' : '') + '">' + (closed ? 'Хаалттай' : 'Нээлттэй') + '</span></h3>' +
+        '<h3>Холболт амжилттай ' + badge + '</h3>' +
         '<dl class="result__meta">' +
           '<dt>Гарчиг</dt><dd>' + esc(cfg.settings.title) + '</dd>' +
           '<dt>Нөхцөл</dt><dd>' + cfg.conditions.map(function (c) { return esc(c.label); }).join(', ') + '</dd>' +
@@ -149,6 +155,8 @@
           '<dt>Үзүүлэлт</dt><dd>' + cfg.attributes.length + ' (бага нөхцөлд ' + cfg.attributes.filter(function (x) { return x.inSmall; }).length + ')</dd>' +
           '<dt>Асуулт</dt><dd>Ерөнхий ' + bySection.general + ', COS ' + bySection.cos + ', шалгах ' + bySection.check + '</dd>' +
           '<dt>Нийтэлсэн</dt><dd>' + esc(String(cfg.version || '').replace('T', ' ')) + '</dd>' +
+          (nowAssigning ? '<dt>Одоо хуваарилж буй</dt><dd>' + esc(nowAssigning) + '</dd>' : '') +
+          (data.assignment ? '<dt>Хуваарилалт</dt><dd>' + esc(data.assignment) + '</dd>' : '') +
         '</dl>' + outdatedHtml +
         '<div class="share">' +
           '<div>' +
