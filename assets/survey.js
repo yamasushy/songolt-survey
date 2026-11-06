@@ -18,6 +18,8 @@
 
   var CLOSED_TITLE = 'Судалгаа хаагдсан байна';
   var CLOSED_BODY = 'Энэ судалгаанд хариулт авах хугацаа дууссан. Сонирхсонд баярлалаа.';
+  var DECLINED_TITLE = 'Судалгаанд оролцохгүй гэж сонголоо';
+  var DECLINED_BODY = 'Таны мэдээлэл хадгалагдаагүй. Энэ цонхыг хааж болно. Дараа оролцох бол холбоосоо дахин нээнэ үү.';
   var FULL_TITLE = 'Оролцогчийн тоо бүрдсэн';
   var FULL_BODY = 'Энэ судалгаанд шаардлагатай оролцогчдын тоо бүрдсэн байна. Сонирхсонд баярлалаа.';
 
@@ -219,6 +221,37 @@
     store.save();
     render();
     focusTop();
+    guardHistory();
+  }
+
+  // Эхэлсэн оролцогч хөтчийн "Буцах" товчоор өмнөх хуудас руу (жишээ нь бүтээгдэхүүний сонголт руу)
+  // буцаж чадахгүй. Хариулт хэвээр үлдэж, одоогийн хуудас дахин харагдана.
+  var historyGuarded = false;
+  function inSurvey() { return !!(S && S.pid && S.step !== 'intro' && S.step !== 'done'); }
+  function guardHistory() {
+    if (!inSurvey() || !window.history || !history.pushState) return;
+    try { history.pushState({ songolt: S.step }, '', location.href); historyGuarded = true; } catch (e) { /* алгасна */ }
+  }
+  window.addEventListener('popstate', function () {
+    if (!historyGuarded || !inSurvey()) return;
+    try { history.pushState({ songolt: S.step }, '', location.href); } catch (e) { /* алгасна */ }
+    toast(S.choice
+      ? 'Бүтээгдэхүүний сонголтоо баталгаажуулсан тул өмнөх хуудас руу буцах боломжгүй. Таны хариулт хадгалагдсан байгаа.'
+      : 'Өмнөх хуудас руу буцах боломжгүй. Таны хариулт хадгалагдсан байгаа.');
+  });
+
+  var toastTimer = 0;
+  function toast(text) {
+    var el = document.getElementById('toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'toast'; el.className = 'toast'; el.setAttribute('role', 'status');
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.hidden = true; }, 4000);
   }
 
   /* ---------- 1. Танилцуулга ба зөвшөөрөл ---------- */
@@ -232,9 +265,15 @@
         '<label class="consent" id="consentBox"><input type="checkbox" id="consent" aria-describedby="consentErr"><span>' + esc(st.consent) + '</span></label>' +
         '<p class="q__error" id="consentErr" hidden>Үргэлжлүүлэхийн тулд зөвшөөрлөө тэмдэглэнэ үү.</p>' +
         '<p class="q__error" id="startErr" role="alert" hidden></p>' +
-        '<div class="actions"><button class="btn btn--primary" type="button" id="startBtn">Судалгааг эхлэх</button></div>' +
+        '<div class="actions"><button class="btn btn--primary" type="button" id="startBtn">Судалгааг эхлэх</button>' +
+        '<button class="btn btn--quiet" type="button" id="declineBtn">Оролцохгүй</button></div>' +
       '</section>';
     var btn = document.getElementById('startBtn');
+    // Зөвшөөрөөгүй бол судалгаа дуусна. Ямар ч мэдээлэл илгээхгүй.
+    document.getElementById('declineBtn').addEventListener('click', function () {
+      store.clear();
+      renderNotice(DECLINED_TITLE, DECLINED_BODY);
+    });
     var box = document.getElementById('consentBox');
     var cb = document.getElementById('consent');
     var err = document.getElementById('consentErr');
@@ -636,6 +675,7 @@
       }
       store.save();
       render();
+      guardHistory();
     }).catch(function () {
       renderNotice('Судалгааг ачаалж чадсангүй', 'Интернэт холболтоо шалгаад дахин оролдоно уу. Асуудал үргэлжилбэл судлаачид мэдэгдэнэ үү.', { error: true, retry: true });
     });
