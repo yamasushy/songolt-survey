@@ -104,12 +104,34 @@
     }).finally(function () { clearTimeout(timer); });
   }
 
+  // Олон хүн зэрэг хандахад (жишээ нь лабораторид) Google түр хугацаанд татгалзаж болно.
+  // Ийм үед санамсаргүй хугацаагаар хүлээж дахин оролдоно, ингэснээр хүсэлтүүд нэг дор давхцахгүй.
+  function backoff(n) {
+    var base = 1000 * Math.pow(2, n - 1);
+    return sleep(base + Math.random() * base * 1.5);
+  }
+  function withRetry(fn, attempts) {
+    var n = 0;
+    function attempt() {
+      n++;
+      return fn().then(function (res) {
+        if (res && res.ok === false && res.error === 'server' && n < attempts) return backoff(n).then(attempt);
+        return res;
+      }, function (err) {
+        if (n < attempts) return backoff(n).then(attempt);
+        throw err;
+      });
+    }
+    return attempt();
+  }
+
   var api = {
     config: function () {
-      return DEMO ? fetchJSON('assets/demo/config.json') : fetchJSON(API + '?a=config', null, 45000);
+      if (DEMO) return fetchJSON('assets/demo/config.json');
+      return withRetry(function () { return fetchJSON(API + '?a=config', null, 45000); }, 4);
     },
     start: function () {
-      return fetchJSON(API, { method: 'POST', body: JSON.stringify({ action: 'start' }) });
+      return fetchJSON(API, { method: 'POST', body: JSON.stringify({ action: 'start' }) }, 45000);
     },
     submit: function (payload) {
       return fetchJSON(API, { method: 'POST', body: JSON.stringify(Object.assign({ action: 'submit' }, payload)) }, 45000);
@@ -312,7 +334,7 @@
   }
 
   function startWithRetry() {
-    return api.start().catch(function () { return sleep(1500).then(api.start); });
+    return withRetry(api.start, 5);
   }
 
   /* ---------- 2, 4, 5. Асуултууд ---------- */
@@ -592,8 +614,8 @@
         e.fatal = !!(res && res.error && res.error !== 'server');
         throw e;
       }).catch(function (err) {
-        if (err.fatal || attempt >= 3) throw err;
-        return sleep(attempt * 2000).then(tryOnce);
+        if (err.fatal || attempt >= 5) throw err;
+        return backoff(attempt).then(tryOnce);
       });
     }
 
